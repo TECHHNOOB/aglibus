@@ -1,0 +1,656 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"><meta content="mobile_tab" name="shell-type"><style>@layer base{html,body{width:100vw;margin:0;padding:0;}body{overscroll-behavior:none;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"><link href="https://fonts.googleapis.com" rel="preconnect"><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { colors: { "on-primary-fixed": "#00164f", "tertiary-fixed": "#ffdad7", "surface": "#f9f9ff", "on-background": "#0e1c2f", "on-secondary-fixed": "#00201a", "primary-fixed-dim": "#b6c4ff", "on-tertiary-fixed-variant": "#930014", "secondary": "#006b5b", "on-primary-fixed-variant": "#003bb0", "background": "#f9f9ff", "secondary-container": "#53f8d9", "primary-container": "#1e60ff", "surface-container-lowest": "#ffffff", "on-tertiary-fixed": "#410004", "on-surface": "#0e1c2f", "secondary-fixed": "#57fbdb", "surface-tint": "#004fe5", "inverse-surface": "#243145", "secondary-fixed-dim": "#2adec0", "on-secondary-fixed-variant": "#005144", "primary": "#0048d4", "error": "#ba1a1a", "on-surface-variant": "#434656", "on-primary": "#ffffff", "surface-container-low": "#f0f3ff", "surface-container-highest": "#d6e3fe", "inverse-on-surface": "#ebf1ff", "inverse-primary": "#b6c4ff", "outline": "#737687", "on-tertiary-container": "#fff1ef", "on-error": "#ffffff", "surface-container-high": "#dee8ff", "surface-variant": "#d6e3fe", "surface-container": "#e7eeff", "outline-variant": "#c3c5d9", "surface-dim": "#cddbf5", "on-secondary-container": "#00705f", "surface-bright": "#f9f9ff", "on-tertiary": "#ffffff", "tertiary-fixed-dim": "#ffb3ae", "tertiary-container": "#d42b31", "on-secondary": "#ffffff", "error-container": "#ffdad6", "primary-fixed": "#dce1ff", "tertiary": "#b0071c", "on-primary-container": "#f2f2ff", "on-error-container": "#93000a" }, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, spacing: { "space-md": "0.75rem", "space-xl": "1.5rem", "space-sm": "0.5rem", "space-xs": "0.25rem", "margin-lg": "1.5rem", "gutter": "1rem", "margin": "1rem", "space-lg": "1rem", "gutter-sm": "0.75rem" }, fontFamily: { "label-md": ["Inter"], "title-md": ["Plus Jakarta Sans"], "headline-md": ["Plus Jakarta Sans"], "body-sm": ["Plus Jakarta Sans"], "label-sm": ["Inter"], "headline-lg": ["Plus Jakarta Sans"], "display": ["Plus Jakarta Sans"], "body-md": ["Plus Jakarta Sans"], "headline-sm": ["Plus Jakarta Sans"], "label-lg": ["Inter"], "headline-lg-mobile": ["Plus Jakarta Sans"], "body-lg": ["Plus Jakarta Sans"], "title-lg": ["Plus Jakarta Sans"] }, fontSize: { "label-md": ["11px", { "lineHeight": "14px", "letterSpacing": "0.02em", "fontWeight": "600" }], "title-md": ["15px", { "lineHeight": "20px", "fontWeight": "600" }], "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "600" }], "body-sm": ["12px", { "lineHeight": "16px", "fontWeight": "400" }], "label-sm": ["10px", { "lineHeight": "12px", "letterSpacing": "0.04em", "fontWeight": "700" }], "headline-lg": ["28px", { "lineHeight": "36px", "letterSpacing": "-0.02em", "fontWeight": "700" }], "display": ["36px", { "lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "800" }], "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }], "headline-sm": ["18px", { "lineHeight": "24px", "fontWeight": "600" }], "label-lg": ["13px", { "lineHeight": "18px", "letterSpacing": "0.01em", "fontWeight": "600" }], "headline-lg-mobile": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "700" }], "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }], "title-lg": ["16px", { "lineHeight": "22px", "fontWeight": "700" }] } } } };</script><style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head><body class="bg-surface font-body-md text-on-surface flex flex-col antialiased selection:bg-primary-fixed selection:text-on-primary-fixed"><header class="fixed top-0 w-full z-50 pt-safe bg-surface/85 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="bg-primary text-on-primary px-gutter py-3 shadow-md flex items-center justify-between"><div class="flex items-center gap-2 min-w-0"><button aria-label="Back" class="w-10 h-10 rounded-full flex items-center justify-center text-on-primary hover:bg-surface-container-lowest/20 active:scale-95 transition-transform flex-shrink-0"><span class="material-symbols-outlined text-[24px]">arrow_back</span></button><div class="flex items-center shrink-0 pl-0.5 pr-1"><img src="https://lh3.googleusercontent.com/aida-public/AB6AXuA87qIRS9YxKBqSN0kd9cf6oRANbFWpsFd7ynZOEpTViI75leqBESSYhGeFOE30vxCcMOllF4TbldUJLm-cH8hgW0_rE_98qhH_3fz7fWnKuaoiruNICzV48bjjSNBX4igLWyVLIWE_LXUBewMfDUlcKQxe-6qKeQFPCnEd8qAOAb9acFK-AbBXivBKJTWMHM75vxbQAn-FoOvaogWeKM6l6e9qPdQ4Sp_f0rYzbaww" alt="AgliBus" class="h-8 w-auto object-contain bg-surface-container-lowest rounded-md px-1 py-0.5 shadow-sm"></div><div class="flex flex-col min-w-0"><div class="flex items-center gap-2"><span class="px-2 py-0.5 rounded bg-surface-container-lowest text-primary font-bold text-[14px]">10A</span><h1 class="text-[17px] font-bold text-on-primary truncate tracking-tight">Chetak Circle ➔ Bhuwana</h1></div><div class="flex items-center gap-1.5 text-inverse-on-surface text-[12px]"><span class="truncate">चेतक सर्कल से भुवाना बाईपास</span></div></div></div><div class="flex items-center gap-1.5 flex-shrink-0"><button aria-label="Refresh bus location" class="flex items-center gap-1 px-3 py-1.5 rounded-full bg-surface-container-lowest/20 hover:bg-surface-container-lowest/30 text-on-primary font-semibold text-[13px] active:scale-95 transition-all" onclick="location.reload()"><span class="material-symbols-outlined text-[18px]">refresh</span><span>ताज़ा करें</span></button></div></div></header><main class="flex flex-col relative w-full pt-16 pb-24 bg-surface min-h-screen"><div class="flex flex-col w-full pb-8">
+<!-- Top Offline Assurance Banner -->
+<div class="px-gutter pt-3 pb-2">
+<div class="bg-secondary-fixed/30 rounded-xl p-3 shadow-sm flex items-center justify-between gap-3">
+<div class="flex items-center gap-2.5 min-w-0">
+<div class="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-on-secondary shrink-0">
+<span class="material-symbols-outlined text-[19px]">cloud_off</span>
+</div>
+<div class="min-w-0 flex flex-col">
+<div class="flex items-center gap-1.5 flex-wrap">
+<span class="font-label-lg text-label-lg text-secondary font-bold tracking-tight">ऑफलाइन मोड • OFFLINE READY</span>
+<span class="inline-flex items-center px-1.5 py-0.2 rounded-full bg-secondary text-on-secondary font-label-sm text-label-sm">सक्रिय</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">100% बिना इंटरनेट के काम करता है (No Network Needed)</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-secondary shrink-0 text-[22px]">verified</span>
+</div>
+</div>
+<!-- Route Card with Quick Change Action -->
+<div class="px-gutter py-2">
+<div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm flex flex-col gap-3">
+<div class="flex items-center justify-between gap-2">
+<div class="flex items-center gap-2 min-w-0">
+<span class="px-2.5 py-1 rounded-lg bg-primary text-on-primary font-headline-sm text-headline-sm font-bold shadow-sm shrink-0">10A</span>
+<div class="min-w-0 flex flex-col">
+<span class="font-label-sm text-label-sm text-primary uppercase font-bold tracking-wide">नियमित सिटी रूट</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface truncate">Chetak Circle ➔ Bhuwana Bypass</h2>
+</div>
+</div>
+<button aria-label="रूट बदलें" class="h-11 px-3.5 rounded-xl bg-surface-container-high text-primary hover:bg-surface-container-highest active:scale-95 transition-all font-label-lg text-label-lg font-bold flex items-center gap-1 shrink-0" type="button">
+<span class="material-symbols-outlined text-[18px]">sync_alt</span>
+<span>बदलें</span>
+</button>
+</div>
+<div class="flex items-center justify-between text-on-surface-variant font-body-sm text-body-sm pt-1">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-secondary">distance</span> कुल दूरी: 8.4 किमी
+        </span>
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-primary">schedule</span> सामान्य समय: 40 मिनट
+        </span>
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-secondary">payments</span> ₹10 - ₹20
+        </span>
+</div>
+</div>
+</div>
+<!-- Direction Switcher (Where Is My Train style large interactive tab) -->
+<div class="px-gutter py-1">
+<div class="bg-surface-container-low rounded-xl p-1.5 flex items-center gap-1.5 shadow-sm">
+<button class="flex-1 py-2.5 px-3 rounded-lg bg-primary-container text-on-primary font-title-md text-title-md flex items-center justify-center gap-2 transition-all shadow-sm" id="dir-forward" onclick="switchDirection('forward')" type="button">
+<span class="material-symbols-outlined text-[18px]">near_me</span>
+<div class="flex flex-col text-left leading-tight">
+<span class="text-[13px] font-bold">चेतक से भुवाना</span>
+<span class="text-[10px] opacity-90">Chetak ➔ Bhuwana</span>
+</div>
+</button>
+<button class="flex-1 py-2.5 px-3 rounded-lg text-on-surface-variant hover:text-on-surface font-title-md text-title-md flex items-center justify-center gap-2 transition-all" id="dir-reverse" onclick="switchDirection('reverse')" type="button">
+<span class="material-symbols-outlined text-[18px]">swap_horiz</span>
+<div class="flex flex-col text-left leading-tight">
+<span class="text-[13px] font-bold">भुवाना से चेतक</span>
+<span class="text-[10px] opacity-75">Bhuwana ➔ Chetak</span>
+</div>
+</button>
+</div>
+</div>
+<!-- Day Selection Tabs (High touch accessibility >= 48px) -->
+<div class="px-gutter pt-3 pb-1">
+<span class="font-label-sm text-label-sm uppercase font-bold text-on-surface-variant tracking-wider">दिन चुनें / Select Service Day:</span>
+<div class="grid grid-cols-3 gap-2 mt-1.5">
+<button class="day-chip active h-12 rounded-xl bg-surface-container-highest text-primary font-title-md text-title-md font-bold flex flex-col items-center justify-center shadow-sm" onclick="selectDay(this)" type="button">
+<span class="text-[13px] leading-tight">सोम - शनि</span>
+<span class="text-[10px] opacity-90 font-label-sm font-normal">Mon - Sat</span>
+</button>
+<button class="day-chip h-12 rounded-xl bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container font-title-md text-title-md flex flex-col items-center justify-center" onclick="selectDay(this)" type="button">
+<span class="text-[13px] leading-tight">रविवार</span>
+<span class="text-[10px] opacity-75 font-label-sm font-normal">Sunday</span>
+</button>
+<button class="day-chip h-12 rounded-xl bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container font-title-md text-title-md flex flex-col items-center justify-center" onclick="selectDay(this)" type="button">
+<span class="text-[13px] leading-tight">त्यौहार / अवकाश</span>
+<span class="text-[10px] opacity-75 font-label-sm font-normal">Holiday</span>
+</button>
+</div>
+</div>
+<!-- Quick Shift Time Horizontal Filter -->
+<div class="px-gutter pt-2 pb-1">
+<div class="flex items-center gap-2 overflow-x-auto py-1">
+<button class="shift-chip active shrink-0 h-10 px-4 rounded-full bg-primary text-on-primary font-label-lg text-label-lg font-bold flex items-center gap-1 shadow-sm" onclick="filterShift(this, 'all')" type="button">
+<span class="material-symbols-outlined text-[16px]">all_inclusive</span>
+<span>सभी ट्रिप (All)</span>
+</button>
+<button class="shift-chip shrink-0 h-10 px-3.5 rounded-full bg-surface-container-lowest text-on-surface-variant font-label-lg text-label-lg font-semibold flex items-center gap-1 shadow-sm" onclick="filterShift(this, 'morning')" type="button">
+<span class="material-symbols-outlined text-[16px] text-secondary">wb_sunny</span>
+<span>सुबह (06:00 - 11:00 AM)</span>
+</button>
+<button class="shift-chip shrink-0 h-10 px-3.5 rounded-full bg-surface-container-lowest text-on-surface-variant font-label-lg text-label-lg font-semibold flex items-center gap-1 shadow-sm" onclick="filterShift(this, 'afternoon')" type="button">
+<span class="material-symbols-outlined text-[16px]">light_mode</span>
+<span>दोपहर (12:00 - 04:00 PM)</span>
+</button>
+<button class="shift-chip shrink-0 h-10 px-3.5 rounded-full bg-surface-container-lowest text-on-surface-variant font-label-lg text-label-lg font-semibold flex items-center gap-1 shadow-sm" onclick="filterShift(this, 'evening')" type="button">
+<span class="material-symbols-outlined text-[16px]">nights_stay</span>
+<span>शाम (05:00 - 09:30 PM)</span>
+</button>
+</div>
+</div>
+<!-- Realtime Frequency Summary Badge -->
+<div class="px-gutter pt-2 pb-1">
+<div class="bg-surface-container-low rounded-xl px-3.5 py-2.5 flex items-center justify-between gap-2">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]">timelapse</span>
+<span class="font-title-md text-title-md text-on-surface">औसत फ्रीक्वेंसी: <strong>हर 15 मिनट में बस</strong></span>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-secondary-fixed text-on-secondary-fixed font-label-sm text-label-sm font-bold">36 ट्रिप्स / दिन</span>
+</div>
+</div>
+<!-- Detailed Timetable Section (Where Is My Train departure stack) -->
+<div class="px-gutter pt-3 flex flex-col gap-3" id="trips-container">
+<!-- Trip 1 (First Bus Landmark) -->
+<div class="trip-card bg-surface-container-lowest rounded-xl p-4 shadow-sm flex flex-col gap-3" data-shift="morning">
+<div class="flex items-start justify-between gap-2">
+<div class="flex items-baseline gap-2">
+<span class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-primary tracking-tight">06:00</span>
+<span class="font-title-md text-title-md font-bold text-on-surface">AM</span>
+<span class="px-2 py-0.5 rounded bg-primary-fixed text-on-primary-fixed font-label-sm text-label-sm font-bold">पहली बस • FIRST BUS</span>
+</div>
+<div class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-secondary-fixed/40 text-secondary font-label-md text-label-md font-bold">
+<span class="material-symbols-outlined text-[14px]">bolt</span>
+<span>PM e-Bus AC</span>
+</div>
+</div>
+<!-- Station timeline snippet -->
+<div class="grid grid-cols-[1fr,auto,1fr] items-center gap-2 bg-surface-container-low/70 rounded-xl p-3">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant font-bold">प्रस्थान • DEPARTURE</span>
+<span class="font-title-md text-title-md text-on-surface font-bold truncate">Chetak Circle</span>
+<span class="font-body-sm text-body-sm text-secondary font-semibold">प्लेटफ़ॉर्म 1</span>
+</div>
+<div class="flex flex-col items-center px-1">
+<span class="font-label-sm text-label-sm text-on-surface-variant font-bold">40 मिनट</span>
+<div class="flex items-center gap-1 text-primary my-0.5">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<div class="w-10 h-0.5 bg-primary"></div>
+<span class="material-symbols-outlined text-[16px] -ml-1">chevron_right</span>
+</div>
+<span class="font-label-sm text-label-sm text-secondary font-bold">8.4 KM</span>
+</div>
+<div class="flex flex-col text-right">
+<span class="font-label-sm text-label-sm text-on-surface-variant font-bold">पहुंचेगी • ARRIVAL</span>
+<span class="font-title-md text-title-md text-on-surface font-bold truncate">Bhuwana Bypass</span>
+<span class="font-headline-sm text-headline-sm font-bold text-on-surface">06:40 AM</span>
+</div>
+</div>
+<div class="flex items-center justify-between pt-1">
+<span class="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-secondary">airline_seat_recline_normal</span> 32 सीटें उपलब्ध
+        </span>
+<button class="min-h-[44px] px-3.5 rounded-lg bg-surface-container-high text-primary hover:bg-surface-container-highest active:scale-95 transition-all font-label-lg text-label-lg font-bold flex items-center gap-1" onclick="toggleStops('stops-1')" type="button">
+<span>स्टॉप्स देखें (11 Stops)</span>
+<span class="material-symbols-outlined text-[18px]">expand_more</span>
+</button>
+</div>
+<!-- Expandable Route Stops Tray -->
+<div class="hidden pt-2" id="stops-1">
+<div class="bg-surface-container-low rounded-xl p-3 flex flex-col gap-2 font-body-sm text-body-sm text-on-surface">
+<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-primary"></span> 06:00 AM — Chetak Circle (शुरुआत)</div>
+<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-outline"></span> 06:04 AM — Mohta Park</div>
+<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-outline"></span> 06:09 AM — Sahelion Ki Bari</div>
+<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-outline"></span> 06:15 AM — Fatehpura Chauraha</div>
+<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-outline"></span> 06:22 AM — Pulla Circle</div>
+<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-outline"></span> 06:30 AM — Celebration Mall Gate</div>
+<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-secondary"></span> 06:40 AM — Bhuwana Bypass Terminal (समाप्त)</div>
+</div>
+</div>
+</div>
+<!-- Trip 2 -->
+<div class="trip-card bg-surface-container-lowest rounded-xl p-4 shadow-sm flex flex-col gap-3" data-shift="morning">
+<div class="flex items-start justify-between gap-2">
+<div class="flex items-baseline gap-2">
+<span class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-on-surface tracking-tight">06:15</span>
+<span class="font-title-md text-title-md font-bold text-on-surface">AM</span>
+</div>
+<div class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-secondary-fixed/40 text-secondary font-label-md text-label-md font-bold">
+<span class="material-symbols-outlined text-[14px]">bolt</span>
+<span>PM e-Bus AC</span>
+</div>
+</div>
+<div class="grid grid-cols-[1fr,auto,1fr] items-center gap-2 bg-surface-container-low/70 rounded-xl p-3">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant font-bold">प्रस्थान • DEPARTURE</span>
+<span class="font-title-md text-title-md text-on-surface font-bold truncate">Chetak Circle</span>
+<span class="font-body-sm text-body-sm text-secondary font-semibold">प्लेटफ़ॉर्म 1</span>
+</div>
+<div class="flex flex-col items-center px-1">
+<span class="font-label-sm text-label-sm text-on-surface-variant font-bold">40 मिनट</span>
+<div class="flex items-center gap-1 text-primary my-0.5">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<div class="w-10 h-0.5 bg-primary"></div>
+<span class="material-symbols-outlined text-[16px] -ml-1">chevron_right</span>
+</div>
+<span class="font-label-sm text-label-sm text-secondary font-bold">8.4 KM</span>
+</div>
+<div class="flex flex-col text-right">
+<span class="font-label-sm text-label-sm text-on-surface-variant font-bold">पहुंचेगी • ARRIVAL</span>
+<span class="font-title-md text-title-md text-on-surface font-bold truncate">Bhuwana Bypass</span>
+<span class="font-headline-sm text-headline-sm font-bold text-on-surface">06:55 AM</span>
+</div>
+</div>
+<div class="flex items-center justify-between pt-1">
+<span class="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-primary">schedule</span> हर 15 मिनट आवृत्ति
+        </span>
+<button class="min-h-[44px] px-3.5 rounded-lg bg-surface-container-high text-primary hover:bg-surface-container-highest active:scale-95 transition-all font-label-lg text-label-lg font-bold flex items-center gap-1" onclick="toggleStops('stops-2')" type="button">
+<span>स्टॉप्स देखें</span>
+<span class="material-symbols-outlined text-[18px]">expand_more</span>
+</button>
+</div>
+<div class="hidden pt-2" id="stops-2">
+<div class="bg-surface-container-low rounded-xl p-3 flex flex-col gap-2 font-body-sm text-body-sm text-on-surface">
+<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-primary"></span> 06:15 AM — Chetak Circle</div>
+<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-outline"></span> 06:24 AM — Sahelion Ki Bari</div>
+<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-outline"></span> 06:30 AM — Fatehpura Chauraha</div>
+<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-outline"></span> 06:45 AM — Celebration Mall</div>
+<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-secondary"></span> 06:55 AM — Bhuwana Bypass Terminal</div>
+</div>
+</div>
+</div>
+<!-- Trip 3 -->
+<div class="trip-card bg-surface-container-lowest rounded-xl p-4 shadow-sm flex flex-col gap-3" data-shift="morning">
+<div class="flex items-start justify-between gap-2">
+<div class="flex items-baseline gap-2">
+<span class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-on-surface tracking-tight">06:30</span>
+<span class="font-title-md text-title-md font-bold text-on-surface">AM</span>
+</div>
+<div class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-secondary-fixed/40 text-secondary font-label-md text-label-md font-bold">
+<span class="material-symbols-outlined text-[14px]">bolt</span>
+<span>PM e-Bus AC</span>
+</div>
+</div>
+<div class="grid grid-cols-[1fr,auto,1fr] items-center gap-2 bg-surface-container-low/70 rounded-xl p-3">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant font-bold">प्रस्थान • DEPARTURE</span>
+<span class="font-title-md text-title-md text-on-surface font-bold truncate">Chetak Circle</span>
+<span class="font-body-sm text-body-sm text-secondary font-semibold">प्लेटफ़ॉर्म 2</span>
+</div>
+<div class="flex flex-col items-center px-1">
+<span class="font-label-sm text-label-sm text-on-surface-variant font-bold">40 मिनट</span>
+<div class="flex items-center gap-1 text-primary my-0.5">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<div class="w-10 h-0.5 bg-primary"></div>
+<span class="material-symbols-outlined text-[16px] -ml-1">chevron_right</span>
+</div>
+<span class="font-label-sm text-label-sm text-secondary font-bold">8.4 KM</span>
+</div>
+<div class="flex flex-col text-right">
+<span class="font-label-sm text-label-sm text-on-surface-variant font-bold">पहुंचेगी • ARRIVAL</span>
+<span class="font-title-md text-title-md text-on-surface font-bold truncate">Bhuwana Bypass</span>
+<span class="font-headline-sm text-headline-sm font-bold text-on-surface">07:10 AM</span>
+</div>
+</div>
+<div class="flex items-center justify-between pt-1">
+<span class="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-secondary">eco</span> ज़ीरो एमिशन इलेक्ट्रिक बस
+        </span>
+<button class="min-h-[44px] px-3.5 rounded-lg bg-surface-container-high text-primary hover:bg-surface-container-highest active:scale-95 transition-all font-label-lg text-label-lg font-bold flex items-center gap-1" onclick="toggleStops('stops-3')" type="button">
+<span>स्टॉप्स देखें</span>
+<span class="material-symbols-outlined text-[18px]">expand_more</span>
+</button>
+</div>
+<div class="hidden pt-2" id="stops-3">
+<div class="bg-surface-container-low rounded-xl p-3 flex flex-col gap-2 font-body-sm text-body-sm text-on-surface">
+<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-primary"></span> 06:30 AM — Chetak Circle</div>
+<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-outline"></span> 06:39 AM — Sahelion Ki Bari</div>
+<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-outline"></span> 06:45 AM — Fatehpura Chauraha</div>
+<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-outline"></span> 07:00 AM — Celebration Mall Gate</div>
+<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-secondary"></span> 07:10 AM — Bhuwana Bypass Terminal</div>
+</div>
+</div>
+</div>
+<!-- Trip 4 -->
+<div class="trip-card bg-surface-container-lowest rounded-xl p-4 shadow-sm flex flex-col gap-3" data-shift="morning">
+<div class="flex items-start justify-between gap-2">
+<div class="flex items-baseline gap-2">
+<span class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-on-surface tracking-tight">06:45</span>
+<span class="font-title-md text-title-md font-bold text-on-surface">AM</span>
+</div>
+<div class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-secondary-fixed/40 text-secondary font-label-md text-label-md font-bold">
+<span class="material-symbols-outlined text-[14px]">bolt</span>
+<span>PM e-Bus AC</span>
+</div>
+</div>
+<div class="grid grid-cols-[1fr,auto,1fr] items-center gap-2 bg-surface-container-low/70 rounded-xl p-3">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant font-bold">प्रस्थान • DEPARTURE</span>
+<span class="font-title-md text-title-md text-on-surface font-bold truncate">Chetak Circle</span>
+<span class="font-body-sm text-body-sm text-secondary font-semibold">प्लेटफ़ॉर्म 1</span>
+</div>
+<div class="flex flex-col items-center px-1">
+<span class="font-label-sm text-label-sm text-on-surface-variant font-bold">40 मिनट</span>
+<div class="flex items-center gap-1 text-primary my-0.5">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<div class="w-10 h-0.5 bg-primary"></div>
+<span class="material-symbols-outlined text-[16px] -ml-1">chevron_right</span>
+</div>
+<span class="font-label-sm text-label-sm text-secondary font-bold">8.4 KM</span>
+</div>
+<div class="flex flex-col text-right">
+<span class="font-label-sm text-label-sm text-on-surface-variant font-bold">पहुंचेगी • ARRIVAL</span>
+<span class="font-title-md text-title-md text-on-surface font-bold truncate">Bhuwana Bypass</span>
+<span class="font-headline-sm text-headline-sm font-bold text-on-surface">07:25 AM</span>
+</div>
+</div>
+<div class="flex items-center justify-between pt-1">
+<span class="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-secondary">credit_card</span> UPI / BM कार्ड मान्य
+        </span>
+<button class="min-h-[44px] px-3.5 rounded-lg bg-surface-container-high text-primary hover:bg-surface-container-highest active:scale-95 transition-all font-label-lg text-label-lg font-bold flex items-center gap-1" onclick="toggleStops('stops-4')" type="button">
+<span>स्टॉप्स देखें</span>
+<span class="material-symbols-outlined text-[18px]">expand_more</span>
+</button>
+</div>
+<div class="hidden pt-2" id="stops-4">
+<div class="bg-surface-container-low rounded-xl p-3 flex flex-col gap-2 font-body-sm text-body-sm text-on-surface">
+<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-primary"></span> 06:45 AM — Chetak Circle</div>
+<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-outline"></span> 06:54 AM — Sahelion Ki Bari</div>
+<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-outline"></span> 07:00 AM — Fatehpura Chauraha</div>
+<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-outline"></span> 07:15 AM — Celebration Mall Gate</div>
+<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-secondary"></span> 07:25 AM — Bhuwana Bypass Terminal</div>
+</div>
+</div>
+</div>
+<!-- Trip 5 (Rush Hour Highlight) -->
+<div class="trip-card bg-surface-container-lowest rounded-xl p-4 shadow-sm flex flex-col gap-3" data-shift="morning">
+<div class="flex items-start justify-between gap-2">
+<div class="flex items-baseline gap-2">
+<span class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-primary tracking-tight">07:00</span>
+<span class="font-title-md text-title-md font-bold text-on-surface">AM</span>
+<span class="px-2 py-0.5 rounded bg-secondary-fixed text-on-secondary-fixed font-label-sm text-label-sm font-bold">ऑफिस शिफ्ट</span>
+</div>
+<div class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-secondary-fixed/40 text-secondary font-label-md text-label-md font-bold">
+<span class="material-symbols-outlined text-[14px]">bolt</span>
+<span>PM e-Bus AC</span>
+</div>
+</div>
+<div class="grid grid-cols-[1fr,auto,1fr] items-center gap-2 bg-surface-container-low/70 rounded-xl p-3">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant font-bold">प्रस्थान • DEPARTURE</span>
+<span class="font-title-md text-title-md text-on-surface font-bold truncate">Chetak Circle</span>
+<span class="font-body-sm text-body-sm text-secondary font-semibold">प्लेटफ़ॉर्म 1</span>
+</div>
+<div class="flex flex-col items-center px-1">
+<span class="font-label-sm text-label-sm text-on-surface-variant font-bold">40 मिनट</span>
+<div class="flex items-center gap-1 text-primary my-0.5">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<div class="w-10 h-0.5 bg-primary"></div>
+<span class="material-symbols-outlined text-[16px] -ml-1">chevron_right</span>
+</div>
+<span class="font-label-sm text-label-sm text-secondary font-bold">8.4 KM</span>
+</div>
+<div class="flex flex-col text-right">
+<span class="font-label-sm text-label-sm text-on-surface-variant font-bold">पहुंचेगी • ARRIVAL</span>
+<span class="font-title-md text-title-md text-on-surface font-bold truncate">Bhuwana Bypass</span>
+<span class="font-headline-sm text-headline-sm font-bold text-on-surface">07:40 AM</span>
+</div>
+</div>
+<div class="flex items-center justify-between pt-1">
+<span class="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-secondary">event_seat</span> महिला सीट आरक्षित
+        </span>
+<button class="min-h-[44px] px-3.5 rounded-lg bg-surface-container-high text-primary hover:bg-surface-container-highest active:scale-95 transition-all font-label-lg text-label-lg font-bold flex items-center gap-1" onclick="toggleStops('stops-5')" type="button">
+<span>स्टॉप्स देखें</span>
+<span class="material-symbols-outlined text-[18px]">expand_more</span>
+</button>
+</div>
+<div class="hidden pt-2" id="stops-5">
+<div class="bg-surface-container-low rounded-xl p-3 flex flex-col gap-2 font-body-sm text-body-sm text-on-surface">
+<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-primary"></span> 07:00 AM — Chetak Circle</div>
+<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-outline"></span> 07:09 AM — Sahelion Ki Bari</div>
+<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-outline"></span> 07:15 AM — Fatehpura Chauraha</div>
+<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-outline"></span> 07:30 AM — Celebration Mall Gate</div>
+<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-secondary"></span> 07:40 AM — Bhuwana Bypass Terminal</div>
+</div>
+</div>
+</div><div class="bg-surface-container-low rounded-xl p-3.5 shadow-sm flex flex-col gap-2.5 relative border border-outline-variant/30 my-0.5" aria-label="Sponsored Advertisement"><div class="flex items-center justify-between"><div class="flex items-center gap-1.5"><span class="px-1.5 py-0.5 rounded bg-surface-container-high text-on-surface-variant font-label-sm text-[10px] uppercase font-bold tracking-wider">Ad</span><span class="font-label-sm text-[11px] text-on-surface-variant">प्रायोजित • Sponsored</span></div><div class="flex items-center gap-0.5 text-on-surface-variant text-[11px]"><span class="material-symbols-outlined text-[14px]">info</span><span class="font-label-sm text-[10px]">AdChoices</span></div></div><div class="flex items-center justify-between gap-3"><div class="flex items-center gap-2.5 min-w-0"><div class="w-10 h-10 rounded-xl bg-secondary-fixed flex items-center justify-center text-on-secondary-fixed shrink-0"><span class="material-symbols-outlined text-[22px]">two_wheeler</span></div><div class="flex flex-col min-w-0"><h4 class="font-title-md text-[14px] font-bold text-on-surface truncate">Rapido Bike-Taxi</h4><p class="font-body-sm text-[12px] text-on-surface-variant truncate">बस स्टॉप से घर तक ₹15 में तुरंत राइड पाएं</p></div></div><button type="button" class="min-h-[44px] px-3.5 rounded-lg bg-secondary text-on-secondary hover:bg-secondary/90 active:scale-95 transition-all font-label-lg text-label-lg font-bold flex items-center justify-center shrink-0 shadow-sm" onclick="triggerToast('Rapido पार्टनर ऐप खुल रहा है...')"><span>राइड बुक करें</span></button></div></div>
+<!-- Trip 6 -->
+<div class="trip-card bg-surface-container-lowest rounded-xl p-4 shadow-sm flex flex-col gap-3" data-shift="morning">
+<div class="flex items-start justify-between gap-2">
+<div class="flex items-baseline gap-2">
+<span class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-on-surface tracking-tight">07:15</span>
+<span class="font-title-md text-title-md font-bold text-on-surface">AM</span>
+</div>
+<div class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-secondary-fixed/40 text-secondary font-label-md text-label-md font-bold">
+<span class="material-symbols-outlined text-[14px]">bolt</span>
+<span>PM e-Bus AC</span>
+</div>
+</div>
+<div class="grid grid-cols-[1fr,auto,1fr] items-center gap-2 bg-surface-container-low/70 rounded-xl p-3">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant font-bold">प्रस्थान • DEPARTURE</span>
+<span class="font-title-md text-title-md text-on-surface font-bold truncate">Chetak Circle</span>
+<span class="font-body-sm text-body-sm text-secondary font-semibold">प्लेटफ़ॉर्म 1</span>
+</div>
+<div class="flex flex-col items-center px-1">
+<span class="font-label-sm text-label-sm text-on-surface-variant font-bold">40 मिनट</span>
+<div class="flex items-center gap-1 text-primary my-0.5">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<div class="w-10 h-0.5 bg-primary"></div>
+<span class="material-symbols-outlined text-[16px] -ml-1">chevron_right</span>
+</div>
+<span class="font-label-sm text-label-sm text-secondary font-bold">8.4 KM</span>
+</div>
+<div class="flex flex-col text-right">
+<span class="font-label-sm text-label-sm text-on-surface-variant font-bold">पहुंचेगी • ARRIVAL</span>
+<span class="font-title-md text-title-md text-on-surface font-bold truncate">Bhuwana Bypass</span>
+<span class="font-headline-sm text-headline-sm font-bold text-on-surface">07:55 AM</span>
+</div>
+</div>
+<div class="flex items-center justify-between pt-1">
+<span class="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-primary">schedule</span> हर 15 मिनट आवृत्ति
+        </span>
+<button class="min-h-[44px] px-3.5 rounded-lg bg-surface-container-high text-primary hover:bg-surface-container-highest active:scale-95 transition-all font-label-lg text-label-lg font-bold flex items-center gap-1" onclick="toggleStops('stops-6')" type="button">
+<span>स्टॉप्स देखें</span>
+<span class="material-symbols-outlined text-[18px]">expand_more</span>
+</button>
+</div>
+<div class="hidden pt-2" id="stops-6">
+<div class="bg-surface-container-low rounded-xl p-3 flex flex-col gap-2 font-body-sm text-body-sm text-on-surface">
+<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-primary"></span> 07:15 AM — Chetak Circle</div>
+<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-outline"></span> 07:24 AM — Sahelion Ki Bari</div>
+<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-outline"></span> 07:30 AM — Fatehpura Chauraha</div>
+<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-outline"></span> 07:45 AM — Celebration Mall Gate</div>
+<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-secondary"></span> 07:55 AM — Bhuwana Bypass Terminal</div>
+</div>
+</div>
+</div>
+<!-- Sample Afternoon Trip (For Filtering Test) -->
+<div class="trip-card bg-surface-container-lowest rounded-xl p-4 shadow-sm flex flex-col gap-3" data-shift="afternoon">
+<div class="flex items-start justify-between gap-2">
+<div class="flex items-baseline gap-2">
+<span class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-on-surface tracking-tight">01:30</span>
+<span class="font-title-md text-title-md font-bold text-on-surface">PM</span>
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-on-surface font-label-sm text-label-sm font-semibold">दोपहर सेवा</span>
+</div>
+<div class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-secondary-fixed/40 text-secondary font-label-md text-label-md font-bold">
+<span class="material-symbols-outlined text-[14px]">bolt</span>
+<span>PM e-Bus AC</span>
+</div>
+</div>
+<div class="grid grid-cols-[1fr,auto,1fr] items-center gap-2 bg-surface-container-low/70 rounded-xl p-3">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant font-bold">प्रस्थान • DEPARTURE</span>
+<span class="font-title-md text-title-md text-on-surface font-bold truncate">Chetak Circle</span>
+<span class="font-body-sm text-body-sm text-secondary font-semibold">प्लेटफ़ॉर्म 1</span>
+</div>
+<div class="flex flex-col items-center px-1">
+<span class="font-label-sm text-label-sm text-on-surface-variant font-bold">40 मिनट</span>
+<div class="flex items-center gap-1 text-primary my-0.5">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<div class="w-10 h-0.5 bg-primary"></div>
+<span class="material-symbols-outlined text-[16px] -ml-1">chevron_right</span>
+</div>
+<span class="font-label-sm text-label-sm text-secondary font-bold">8.4 KM</span>
+</div>
+<div class="flex flex-col text-right">
+<span class="font-label-sm text-label-sm text-on-surface-variant font-bold">पहुंचेगी • ARRIVAL</span>
+<span class="font-title-md text-title-md text-on-surface font-bold truncate">Bhuwana Bypass</span>
+<span class="font-headline-sm text-headline-sm font-bold text-on-surface">02:10 PM</span>
+</div>
+</div>
+<div class="flex items-center justify-between pt-1">
+<span class="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-secondary">ac_unit</span> फुली वातानुकूलित (Air Conditioned)
+        </span>
+<button class="min-h-[44px] px-3.5 rounded-lg bg-surface-container-high text-primary hover:bg-surface-container-highest active:scale-95 transition-all font-label-lg text-label-lg font-bold flex items-center gap-1" onclick="toggleStops('stops-7')" type="button">
+<span>स्टॉप्स देखें</span>
+<span class="material-symbols-outlined text-[18px]">expand_more</span>
+</button>
+</div>
+<div class="hidden pt-2" id="stops-7">
+<div class="bg-surface-container-low rounded-xl p-3 flex flex-col gap-2 font-body-sm text-body-sm text-on-surface">
+<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-primary"></span> 01:30 PM — Chetak Circle</div>
+<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-outline"></span> 01:39 PM — Sahelion Ki Bari</div>
+<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-outline"></span> 01:45 PM — Fatehpura Chauraha</div>
+<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-outline"></span> 02:00 PM — Celebration Mall Gate</div>
+<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-secondary"></span> 02:10 PM — Bhuwana Bypass Terminal</div>
+</div>
+</div>
+</div>
+<!-- Sample Evening Trip -->
+<div class="trip-card bg-surface-container-lowest rounded-xl p-4 shadow-sm flex flex-col gap-3" data-shift="evening">
+<div class="flex items-start justify-between gap-2">
+<div class="flex items-baseline gap-2">
+<span class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-on-surface tracking-tight">08:45</span>
+<span class="font-title-md text-title-md font-bold text-on-surface">PM</span>
+<span class="px-2 py-0.5 rounded bg-tertiary-fixed text-on-tertiary-fixed font-label-sm text-label-sm font-bold">अंतिम बस • LAST BUS</span>
+</div>
+<div class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-secondary-fixed/40 text-secondary font-label-md text-label-md font-bold">
+<span class="material-symbols-outlined text-[14px]">bolt</span>
+<span>PM e-Bus AC</span>
+</div>
+</div>
+<div class="grid grid-cols-[1fr,auto,1fr] items-center gap-2 bg-surface-container-low/70 rounded-xl p-3">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant font-bold">प्रस्थान • DEPARTURE</span>
+<span class="font-title-md text-title-md text-on-surface font-bold truncate">Chetak Circle</span>
+<span class="font-body-sm text-body-sm text-secondary font-semibold">प्लेटफ़ॉर्म 1</span>
+</div>
+<div class="flex flex-col items-center px-1">
+<span class="font-label-sm text-label-sm text-on-surface-variant font-bold">40 मिनट</span>
+<div class="flex items-center gap-1 text-primary my-0.5">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<div class="w-10 h-0.5 bg-primary"></div>
+<span class="material-symbols-outlined text-[16px] -ml-1">chevron_right</span>
+</div>
+<span class="font-label-sm text-label-sm text-secondary font-bold">8.4 KM</span>
+</div>
+<div class="flex flex-col text-right">
+<span class="font-label-sm text-label-sm text-on-surface-variant font-bold">पहुंचेगी • ARRIVAL</span>
+<span class="font-title-md text-title-md text-on-surface font-bold truncate">Bhuwana Bypass</span>
+<span class="font-headline-sm text-headline-sm font-bold text-on-surface">09:25 PM</span>
+</div>
+</div>
+<div class="flex items-center justify-between pt-1">
+<span class="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-tertiary">warning</span> रात्रि 09:25 बजे सेवा समाप्त
+        </span>
+<button class="min-h-[44px] px-3.5 rounded-lg bg-surface-container-high text-primary hover:bg-surface-container-highest active:scale-95 transition-all font-label-lg text-label-lg font-bold flex items-center gap-1" onclick="toggleStops('stops-8')" type="button">
+<span>स्टॉप्स देखें</span>
+<span class="material-symbols-outlined text-[18px]">expand_more</span>
+</button>
+</div>
+<div class="hidden pt-2" id="stops-8">
+<div class="bg-surface-container-low rounded-xl p-3 flex flex-col gap-2 font-body-sm text-body-sm text-on-surface">
+<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-primary"></span> 08:45 PM — Chetak Circle</div>
+<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-outline"></span> 08:54 PM — Sahelion Ki Bari</div>
+<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-outline"></span> 09:00 PM — Fatehpura Chauraha</div>
+<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-outline"></span> 09:15 PM — Celebration Mall Gate</div>
+<div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-secondary"></span> 09:25 PM — Bhuwana Bypass Terminal</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Offline Notice & PDF Download Section -->
+<div class="px-gutter pt-6 pb-2">
+<div class="bg-surface-container-low rounded-2xl p-4 shadow-sm flex flex-col gap-3">
+<div class="flex items-start gap-3">
+<div class="w-10 h-10 rounded-full bg-primary-fixed flex items-center justify-center text-primary shrink-0">
+<span class="material-symbols-outlined text-[24px]">save</span>
+</div>
+<div class="flex flex-col min-w-0">
+<h3 class="font-title-lg text-title-lg text-on-surface">फ़ोन में सेव है (Offline Database)</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed mt-0.5">
+            यह समय सारणी आपके डिवाइस में ऑफ़लाइन संग्रहित है। नया शेड्यूल डाउनलोड करने या मार्ग परिवर्तन जांचने के लिए इंटरनेट होने पर ताज़ा करें।
+          </p>
+<div class="flex items-center gap-1.5 text-on-surface-variant font-label-sm text-label-sm mt-1.5">
+<span class="material-symbols-outlined text-[14px] text-secondary">update</span>
+<span>अंतिम अपडेट: 15 मार्च 2025 • Ver 4.2</span>
+</div>
+</div>
+</div>
+<!-- Action Buttons (≥ 48px touch targets for accessibility) -->
+<div class="grid grid-cols-2 gap-2.5 pt-1">
+<button class="h-12 rounded-xl bg-surface-container-highest text-primary hover:bg-surface-container-high active:scale-95 transition-all font-title-md text-title-md font-bold flex items-center justify-center gap-2 shadow-sm" onclick="triggerToast('PDF समय सारणी डाउनलोड हो रही है...')" type="button">
+<span class="material-symbols-outlined text-[20px]">download</span>
+<span>PDF सेव करें</span>
+</button>
+<button class="h-12 rounded-xl bg-primary text-on-primary hover:bg-surface-tint active:scale-95 transition-all font-title-md text-title-md font-bold flex items-center justify-center gap-2 shadow-sm" onclick="triggerToast('ऑफलाइन शेड्यूल पहले से अद्यतित है!')" type="button">
+<span class="material-symbols-outlined text-[20px]">sync</span>
+<span>ताज़ा करें (Update)</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Toast Notification Snackbar -->
+<div class="fixed bottom-20 left-1/2 -translate-x-1/2 bg-inverse-surface text-inverse-on-surface px-4 py-2.5 rounded-xl shadow-xl font-body-md text-body-md font-medium items-center gap-2 z-50 pointer-events-none transition-all duration-300 opacity-0 translate-y-4 flex" id="toast">
+<span class="material-symbols-outlined text-[18px] text-secondary-fixed">check_circle</span>
+<span id="toast-text">सफलतापूर्वक सेव हुआ</span>
+</div>
+</div>
+<script>
+  function toggleStops(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (el.classList.contains('hidden')) {
+      el.classList.remove('hidden');
+    } else {
+      el.classList.add('hidden');
+    }
+  }
+
+  function switchDirection(dir) {
+    const btnFwd = document.getElementById('dir-forward');
+    const btnRev = document.getElementById('dir-reverse');
+    
+    if (dir === 'forward') {
+      btnFwd.className = 'flex-1 py-2.5 px-3 rounded-lg bg-primary-container text-on-primary font-title-md text-title-md flex items-center justify-center gap-2 transition-all shadow-sm';
+      btnRev.className = 'flex-1 py-2.5 px-3 rounded-lg text-on-surface-variant hover:text-on-surface font-title-md text-title-md flex items-center justify-center gap-2 transition-all';
+      triggerToast('दिशा: चेतक सर्कल ➔ भुवाना बाईपास');
+    } else {
+      btnRev.className = 'flex-1 py-2.5 px-3 rounded-lg bg-primary-container text-on-primary font-title-md text-title-md flex items-center justify-center gap-2 transition-all shadow-sm';
+      btnFwd.className = 'flex-1 py-2.5 px-3 rounded-lg text-on-surface-variant hover:text-on-surface font-title-md text-title-md flex items-center justify-center gap-2 transition-all';
+      triggerToast('दिशा: भुवाना बाईपास ➔ चेतक सर्कल');
+    }
+  }
+
+  function selectDay(btn) {
+    document.querySelectorAll('.day-chip').forEach(b => {
+      b.className = 'day-chip h-12 rounded-xl bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container font-title-md text-title-md flex flex-col items-center justify-center';
+    });
+    btn.className = 'day-chip active h-12 rounded-xl bg-surface-container-highest text-primary font-title-md text-title-md font-bold flex flex-col items-center justify-center shadow-sm';
+    triggerToast('समय सारणी अपडेट की गई');
+  }
+
+  function filterShift(btn, shift) {
+    document.querySelectorAll('.shift-chip').forEach(b => {
+      b.className = 'shift-chip shrink-0 h-10 px-3.5 rounded-full bg-surface-container-lowest text-on-surface-variant font-label-lg text-label-lg font-semibold flex items-center gap-1 shadow-sm';
+    });
+    btn.className = 'shift-chip active shrink-0 h-10 px-4 rounded-full bg-primary text-on-primary font-label-lg text-label-lg font-bold flex items-center gap-1 shadow-sm';
+
+    const cards = document.querySelectorAll('.trip-card');
+    cards.forEach(card => {
+      if (shift === 'all' || card.getAttribute('data-shift') === shift) {
+        card.style.display = 'flex';
+      } else {
+        card.style.display = 'none';
+      }
+    });
+  }
+
+  function triggerToast(msg) {
+    const toast = document.getElementById('toast');
+    const toastText = document.getElementById('toast-text');
+    if (!toast || !toastText) return;
+
+    toastText.innerText = msg;
+    toast.classList.remove('opacity-0', 'translate-y-4');
+    toast.classList.add('opacity-100', 'translate-y-0');
+
+    setTimeout(() => {
+      toast.classList.add('opacity-0', 'translate-y-4');
+      toast.classList.remove('opacity-100', 'translate-y-0');
+    }, 2400);
+  }
+</script></main><nav class="fixed bottom-0 w-full z-50 pb-safe bg-surface-container-lowest/90 backdrop-blur-xl shadow-[0_-10px_30px_-5px_rgba(11,25,44,0.08)]" data-active-classes="text-primary font-title-md relative after:content-[''] after:absolute after:-bottom-1 after:w-5 after:h-1 after:bg-primary-container after:rounded-full after:shadow-[0_0_12px_rgba(30,96,255,0.8)]"><div class="h-16 px-space-xs flex items-center justify-around"><a class="flex flex-col items-center justify-center min-w-[56px] h-11 text-on-surface-variant hover:text-on-surface transition-all gap-0.5" data-path="home" href="#"><span class="material-symbols-outlined text-[22px]">directions_bus</span><span class="font-label-sm text-label-sm">Home</span></a><a class="flex flex-col items-center justify-center min-w-[56px] h-11 text-on-surface-variant hover:text-on-surface transition-all gap-0.5" data-path="live-tracker" href="#"><span class="material-symbols-outlined text-[22px]">fmd_good</span><span class="font-label-sm text-label-sm">Live Track</span></a><a class="flex flex-col items-center justify-center min-w-[56px] h-11 text-on-surface-variant hover:text-on-surface transition-all gap-0.5" data-path="routes" href="#"><span class="material-symbols-outlined text-[22px]">alt_route</span><span class="font-label-sm text-label-sm">Routes</span></a><a class="flex flex-col items-center justify-center min-w-[56px] h-11 text-on-surface-variant hover:text-on-surface transition-all gap-0.5" data-path="radar" href="#"><span class="material-symbols-outlined text-[22px]">radar</span><span class="font-label-sm text-label-sm">Radar</span></a><a class="flex flex-col items-center justify-center min-w-[56px] h-11 text-on-surface-variant hover:text-on-surface transition-all gap-0.5" data-path="about" href="#"><span class="material-symbols-outlined text-[22px]">info</span><span class="font-label-sm text-label-sm">About</span></a></div></nav>
+
+
+</body></html>

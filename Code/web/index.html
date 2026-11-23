@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#12263a">
+<title>Udaipur City Bus · Live tracker</title>
+<meta name="description" content="Explore live city bus positions and route assignments in Udaipur.">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="/app.css">
+<script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script defer src="/app.js"></script>
+<script defer src="/network.js"></script>
+<script defer src="/transit.js"></script>
+</head>
+<body>
+<header class="top"><div class="top-inner">
+  <a class="brand" href="/" aria-label="Udaipur City Bus home"><span class="brand-icon" aria-hidden="true"><span></span></span><span>Udaipur <strong>City Bus</strong></span></a>
+  <nav class="nav" aria-label="Dashboard sections">
+    <button type="button" data-tab="track" aria-current="page">Tracker</button><button type="button" data-tab="routes">Routes</button><button type="button" data-tab="stands">Bus stands</button><button type="button" data-tab="times">Timetable</button><button type="button" data-tab="plan">Plan trip</button><button type="button" data-tab="feeds">Data feeds</button>
+  </nav>
+  <span class="condition"><i id="header-dot"></i><span id="header-status">Connecting</span></span>
+</div></header>
+<main class="shell">
+  <div class="intro">
+    <div><h1>Live bus tracker</h1><p>Find a bus across Udaipur and check its last GPS update.</p></div>
+    <div class="controls"><label class="switch"><input id="auto" type="checkbox" checked><span>Auto-refresh</span></label><button type="button" id="refresh" class="primary"><span aria-hidden="true">↻</span> Refresh</button></div>
+  </div>
+  <section class="metrics" aria-label="Fleet overview">
+    <div class="metric"><span>Mapped buses</span><strong id="fleet-all">—</strong></div>
+    <div class="metric"><span><i class="legend green"></i> Moving</span><strong id="fleet-moving">—</strong></div>
+    <div class="metric"><span><i class="legend blue"></i> Stopped</span><strong id="fleet-stopped">—</strong></div>
+    <div class="metric"><span><i class="legend gray"></i> Last known</span><strong id="fleet-last">—</strong></div>
+    <div class="metric"><span><i class="legend amber"></i> Speed unknown</span><strong id="fleet-unknown">—</strong></div>
+  </section>
+  <p id="notice" class="notice" role="status">Connecting to the Udaipur fleet feeds…</p>
+  <section id="track" class="view tracker" aria-label="Live tracker">
+    <div class="map-panel card">
+      <div class="card-head"><div><h2>Fleet map</h2><p id="map-caption">Udaipur, Rajasthan</p></div><div class="map-actions"><button class="ghost" type="button" id="locate" aria-pressed="false">Near me</button><button class="ghost" type="button" id="fit">Fit buses</button></div></div>
+      <div id="map" role="region" aria-label="Udaipur bus map"><p class="map-message">Loading map…</p></div>
+      <div id="bus-detail" class="details" aria-live="polite"><p>Select a bus on the map or in the list to see its details.</p></div>
+    </div>
+    <aside class="fleet-panel card" aria-label="Vehicles">
+      <div class="card-head"><div><h2>Vehicles</h2><p id="count">Waiting for feed</p></div><button type="button" class="ghost" id="clear">Clear</button></div>
+      <div class="filters">
+        <label class="sr" for="search">Find a vehicle or route</label><input type="search" id="search" placeholder="Search bus number or route">
+        <div class="selects"><label><span class="sr">Operator</span><select id="operator"><option value="">All operators</option><option>PM e-Bus</option><option>UCTSL</option><option>Unknown</option></select></label><label><span class="sr">Vehicle status</span><select id="state"><option value="">All statuses</option><option value="moving">Moving</option><option value="stopped">Stopped</option><option value="last">Last known</option><option value="unknown">Speed unknown</option></select></label></div>
+        <label class="sr" for="route">Route assignment</label><select id="route"><option value="">All routes</option></select>
+      </div>
+      <div id="list" class="list"><p class="empty">Waiting for positions…</p></div>
+    </aside>
+  </section>
+  <section id="routes" class="view card directory transit-view" hidden aria-label="Route directory">
+    <div class="card-head"><div><h2>Bus routes</h2><p id="network-count"></p></div><label class="switch"><input id="variants" type="checkbox"> Include depot and variants</label></div>
+    <div class="transit-fields"><label for="route-search">Search routes or stops</label><input type="search" id="route-search" placeholder="PM2, Dabok, चेतक…"></div>
+    <div class="directory-grid">
+      <div id="network-routes" class="directory-list"></div>
+      <div id="route-detail" class="transit-detail"></div>
+    </div>
+  </section>
+  <section id="stands" class="view card directory transit-view" hidden aria-label="Bus stand directory">
+    <div class="card-head"><div><h2>Bus stands</h2><p id="stop-count"></p></div><label class="switch"><input id="saved-stops" type="checkbox"> Saved only</label></div>
+    <div class="transit-fields"><label for="stand-search">Find a bus stand</label><input type="search" id="stand-search" placeholder="Airport, Surajpole, उदियापोल…"></div>
+    <div class="directory-grid">
+      <div id="stand-list" class="directory-list"></div>
+      <div id="stand-detail" class="transit-detail"></div>
+    </div>
+  </section>
+  <section id="times" class="view card directory transit-view" hidden aria-label="Timetable">
+    <div class="card-head"><div><h2>Timetable</h2><p>Route frequencies, travel times and separately labelled GPS observations.</p></div></div>
+    <div class="transit-fields"><label for="time-route">Select a route</label><select id="time-route"></select></div>
+    <div id="time-detail" class="transit-detail"></div>
+  </section>
+  <section id="plan" class="view card directory transit-view" hidden aria-label="Journey planner">
+    <div class="card-head"><div><h2>Plan a trip</h2><p>Compare direct routes and journeys with one change.</p></div></div>
+    <form id="plan-form" class="plan-form">
+      <label>From <select id="trip-from" required></select></label>
+      <button id="trip-swap" type="button" class="ghost" aria-label="Swap starting and destination stops">Swap</button>
+      <label>To <select id="trip-to" required></select></label>
+      <button class="primary" type="submit">Find buses</button>
+    </form>
+    <div id="trip-results" class="transit-detail" aria-live="polite"></div>
+  </section>
+  <section id="feeds" class="view card directory" hidden aria-label="Feed health">
+    <div class="card-head"><div><h2>Data feeds</h2><p>Availability and last successful fetch for each BharatChopal endpoint.</p></div></div>
+    <div id="feed-list" class="feed-list"></div>
+  </section>
+  <footer><button type="button" class="ghost" id="theme">Dark mode</button><span id="updated">Waiting for first update</span><span>Source <a href="https://bharatchopal.com/bus/" target="_blank" rel="noopener noreferrer">BharatChopal</a></span></footer>
+</main>
+</body>
+</html>

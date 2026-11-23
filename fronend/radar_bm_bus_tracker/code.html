@@ -1,0 +1,335 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"><meta content="mobile_tab" name="shell-type"><style>@layer base{html,body{width:100vw;margin:0;padding:0;}body{overscroll-behavior:none;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"><link href="https://fonts.googleapis.com" rel="preconnect"><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { colors: { "on-primary-fixed": "#00164f", "tertiary-fixed": "#ffdad7", "surface": "#f9f9ff", "on-background": "#0e1c2f", "on-secondary-fixed": "#00201a", "primary-fixed-dim": "#b6c4ff", "on-tertiary-fixed-variant": "#930014", "secondary": "#006b5b", "on-primary-fixed-variant": "#003bb0", "background": "#f9f9ff", "secondary-container": "#53f8d9", "primary-container": "#1e60ff", "surface-container-lowest": "#ffffff", "on-tertiary-fixed": "#410004", "on-surface": "#0e1c2f", "secondary-fixed": "#57fbdb", "surface-tint": "#004fe5", "inverse-surface": "#243145", "secondary-fixed-dim": "#2adec0", "on-secondary-fixed-variant": "#005144", "primary": "#0048d4", "error": "#ba1a1a", "on-surface-variant": "#434656", "on-primary": "#ffffff", "surface-container-low": "#f0f3ff", "surface-container-highest": "#d6e3fe", "inverse-on-surface": "#ebf1ff", "inverse-primary": "#b6c4ff", "outline": "#737687", "on-tertiary-container": "#fff1ef", "on-error": "#ffffff", "surface-container-high": "#dee8ff", "surface-variant": "#d6e3fe", "surface-container": "#e7eeff", "outline-variant": "#c3c5d9", "surface-dim": "#cddbf5", "on-secondary-container": "#00705f", "surface-bright": "#f9f9ff", "on-tertiary": "#ffffff", "tertiary-fixed-dim": "#ffb3ae", "tertiary-container": "#d42b31", "on-secondary": "#ffffff", "error-container": "#ffdad6", "primary-fixed": "#dce1ff", "tertiary": "#b0071c", "on-primary-container": "#f2f2ff", "on-error-container": "#93000a" }, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, spacing: { "space-md": "0.75rem", "space-xl": "1.5rem", "space-sm": "0.5rem", "space-xs": "0.25rem", "margin-lg": "1.5rem", "gutter": "1rem", "margin": "1rem", "space-lg": "1rem", "gutter-sm": "0.75rem" }, fontFamily: { "label-md": ["Inter"], "title-md": ["Plus Jakarta Sans"], "headline-md": ["Plus Jakarta Sans"], "body-sm": ["Plus Jakarta Sans"], "label-sm": ["Inter"], "headline-lg": ["Plus Jakarta Sans"], "display": ["Plus Jakarta Sans"], "body-md": ["Plus Jakarta Sans"], "headline-sm": ["Plus Jakarta Sans"], "label-lg": ["Inter"], "headline-lg-mobile": ["Plus Jakarta Sans"], "body-lg": ["Plus Jakarta Sans"], "title-lg": ["Plus Jakarta Sans"] }, fontSize: { "label-md": ["11px", { "lineHeight": "14px", "letterSpacing": "0.02em", "fontWeight": "600" }], "title-md": ["15px", { "lineHeight": "20px", "fontWeight": "600" }], "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "600" }], "body-sm": ["12px", { "lineHeight": "16px", "fontWeight": "400" }], "label-sm": ["10px", { "lineHeight": "12px", "letterSpacing": "0.04em", "fontWeight": "700" }], "headline-lg": ["28px", { "lineHeight": "36px", "letterSpacing": "-0.02em", "fontWeight": "700" }], "display": ["36px", { "lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "800" }], "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }], "headline-sm": ["18px", { "lineHeight": "24px", "fontWeight": "600" }], "label-lg": ["13px", { "lineHeight": "18px", "letterSpacing": "0.01em", "fontWeight": "600" }], "headline-lg-mobile": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "700" }], "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }], "title-lg": ["16px", { "lineHeight": "22px", "fontWeight": "700" }] } } } };</script><style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head><body class="bg-surface font-body-md text-on-surface flex flex-col antialiased selection:bg-primary-fixed selection:text-on-primary-fixed"><header class="fixed top-0 w-full z-50 pt-safe bg-surface/85 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="bg-primary text-on-primary px-gutter py-3 shadow-md flex items-center justify-between"><div class="flex items-center gap-2 min-w-0"><button aria-label="Back" class="w-10 h-10 rounded-full flex items-center justify-center text-on-primary hover:bg-surface-container-lowest/20 active:scale-95 transition-transform flex-shrink-0"><span class="material-symbols-outlined text-[24px]">arrow_back</span></button><img src="https://lh3.googleusercontent.com/aida-public/AB6AXuA87qIRS9YxKBqSN0kd9cf6oRANbFWpsFd7ynZOEpTViI75leqBESSYhGeFOE30vxCcMOllF4TbldUJLm-cH8hgW0_rE_98qhH_3fz7fWnKuaoiruNICzV48bjjSNBX4igLWyVLIWE_LXUBewMfDUlcKQxe-6qKeQFPCnEd8qAOAb9acFK-AbBXivBKJTWMHM75vxbQAn-FoOvaogWeKM6l6e9qPdQ4Sp_f0rYzbaww" alt="AgliBus Logo" class="h-8 w-auto object-contain flex-shrink-0 bg-surface-container-lowest rounded-md px-1.5 py-0.5"><div class="flex flex-col min-w-0"><div class="flex items-center gap-2"><span class="px-2 py-0.5 rounded bg-surface-container-lowest text-primary font-bold text-[14px]">10A</span><h1 class="text-[17px] font-bold text-on-primary truncate tracking-tight">Chetak Circle ➔ Bhuwana</h1></div><div class="flex items-center gap-1.5 text-inverse-on-surface text-[12px]"><span class="truncate">चेतक सर्कल से भुवाना बाईपास</span></div></div></div><div class="flex items-center gap-1.5 flex-shrink-0"><button aria-label="Refresh bus location" class="flex items-center gap-1 px-3 py-1.5 rounded-full bg-surface-container-lowest/20 hover:bg-surface-container-lowest/30 text-on-primary font-semibold text-[13px] active:scale-95 transition-all" onclick="location.reload()"><span class="material-symbols-outlined text-[18px]">refresh</span><span>ताज़ा करें</span></button></div></div></header><main class="flex flex-col relative w-full pt-16 pb-24 bg-surface min-h-screen"><div class="flex flex-col w-full">
+<!-- Interactive Top Location & Distance Filter Banner -->
+<section class="px-gutter pt-3 pb-2 flex flex-col gap-2.5">
+<div class="flex items-center justify-between">
+<div class="flex flex-col">
+<span class="font-headline-sm text-headline-sm text-on-surface tracking-tight">पास की बसें • Buses Near You</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">2 KM Radar Range • वास्तविक समय ट्रैकिंग</span>
+</div>
+<div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-secondary-container/40">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-secondary"></span>
+</span>
+<span class="font-label-md text-label-md text-on-secondary-fixed-variant font-bold uppercase tracking-wider">LIVE GPS</span>
+</div>
+</div>
+<!-- Active User Location Chip -->
+<div class="flex items-center justify-between p-3 rounded-xl bg-surface-container-lowest shadow-sm">
+<div class="flex items-center gap-2.5 min-w-0">
+<div class="w-9 h-9 rounded-full bg-surface-container-high flex items-center justify-center text-primary flex-shrink-0">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">my_location</span>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-1">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase">आपकी लोकेशन (Current Spot)</span>
+</div>
+<span class="font-title-md text-title-md text-on-surface truncate font-bold">चेतक सर्कल (Chetak Circle)</span>
+</div>
+</div>
+<button class="px-3 py-1.5 rounded-lg bg-surface-container-high text-primary font-label-md text-label-md font-bold active:scale-95 transition-transform flex items-center gap-1">
+<span>बदलें</span>
+<span class="text-on-surface-variant text-[10px]">Change</span>
+</button>
+</div>
+<!-- Distance Radii Selector Chips -->
+<div class="flex items-center gap-2 overflow-x-auto py-1 -mx-gutter px-gutter">
+<button class="px-3.5 py-2 rounded-full bg-surface-container-lowest text-on-surface-variant font-label-lg text-label-lg active:scale-95 transition-all flex-shrink-0 shadow-sm">
+        500m
+      </button>
+<button class="px-3.5 py-2 rounded-full bg-surface-container-lowest text-on-surface-variant font-label-lg text-label-lg active:scale-95 transition-all flex-shrink-0 shadow-sm">
+        1 km
+      </button>
+<button class="px-4 py-2 rounded-full bg-primary text-on-primary font-label-lg text-label-lg font-bold shadow-md flex-shrink-0 flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px]">check_circle</span>
+<span>2 km (चुना हुआ / Selected)</span>
+</button>
+<button class="px-3.5 py-2 rounded-full bg-surface-container-lowest text-on-surface-variant font-label-lg text-label-lg active:scale-95 transition-all flex-shrink-0 shadow-sm">
+        5 km
+      </button>
+</div>
+</section>
+<!-- Approaching Buses Quick Stat Highlight Card -->
+<section class="px-gutter my-2">
+<div class="p-3.5 rounded-xl bg-surface-container-high shadow-sm flex items-center gap-3">
+<div class="w-11 h-11 rounded-xl bg-primary-container text-on-primary flex items-center justify-center flex-shrink-0 shadow-sm">
+<span class="material-symbols-outlined text-[24px]">radar</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-title-md text-title-md text-on-surface font-bold truncate">4 बसें पास आ रही हैं (4 Buses Approaching)</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant truncate">अगली बस 3 मिनट में चेतक सर्कल पहुंचेगी</span>
+</div>
+</div>
+</section>
+<!-- Section Title -->
+<div class="px-gutter pt-2 pb-1 flex items-center justify-between">
+<span class="font-title-md text-title-md text-on-surface font-bold">आसपास की बसें • Nearest Buses</span>
+<span class="font-label-md text-label-md text-secondary font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">sensors</span> ऑटो-अपडेट
+    </span>
+</div>
+<!-- Nearest Buses Accessible Cards (Where Is My Train Style) -->
+<section class="px-gutter flex flex-col gap-3 py-2">
+<!-- Bus Card 1: 10A -->
+<article class="p-4 rounded-xl bg-surface-container-lowest shadow-sm flex flex-col gap-3 transition-transform active:scale-[0.99]">
+<div class="flex items-start justify-between gap-2">
+<div class="flex items-center gap-2">
+<span class="px-3 py-1 rounded-lg bg-primary-container text-on-primary font-headline-sm text-headline-sm font-extrabold tracking-tight">
+            10A
+          </span>
+<span class="px-2 py-1 rounded bg-secondary-container/30 text-on-secondary-fixed-variant font-label-md text-label-md font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">bolt</span> Electric AC
+          </span>
+</div>
+<div class="flex flex-col items-end">
+<span class="font-title-md text-title-md text-secondary font-extrabold flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">schedule</span> 3 मिनट में
+          </span>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-semibold">350m दूर • Near Court</span>
+</div>
+</div>
+<div class="flex flex-col gap-0.5">
+<div class="flex items-center gap-1.5 text-on-surface font-title-lg text-title-lg font-bold">
+<span>Chetak Circle</span>
+<span class="material-symbols-outlined text-[18px] text-primary">arrow_forward</span>
+<span>Bhuwana Bypass</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant font-medium">चेतक सर्कल ➔ भुवाना बाईपास</span>
+</div>
+<div class="p-2.5 rounded-lg bg-surface-container-low flex items-center justify-between text-on-surface">
+<div class="flex items-center gap-2 min-w-0">
+<span class="material-symbols-outlined text-primary text-[18px]">near_me</span>
+<span class="font-body-sm text-body-sm truncate"><strong class="font-bold">अगला स्टॉप:</strong> Court Chauraha (कोर्ट चौराहा)</span>
+</div>
+<span class="font-label-sm text-label-sm text-secondary font-bold uppercase tracking-wide">समय पर</span>
+</div>
+<div class="flex items-center justify-between pt-1">
+<div class="flex items-center gap-2 text-on-surface-variant font-body-sm text-body-sm">
+<span class="material-symbols-outlined text-[18px] text-secondary">airline_seat_recline_normal</span>
+<span>सीटें खाली: ~14 Seats</span>
+</div>
+<button class="h-11 px-4 rounded-xl bg-secondary text-on-secondary font-title-md text-title-md font-bold shadow-sm active:scale-95 transition-all flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[18px]">fmd_good</span>
+<span>लाइव देखें / Track Live</span>
+</button>
+</div>
+</article>
+<!-- Bus Card 2: 4B -->
+<article class="p-4 rounded-xl bg-surface-container-lowest shadow-sm flex flex-col gap-3 transition-transform active:scale-[0.99]">
+<div class="flex items-start justify-between gap-2">
+<div class="flex items-center gap-2">
+<span class="px-3 py-1 rounded-lg bg-primary-container text-on-primary font-headline-sm text-headline-sm font-extrabold tracking-tight">
+            4B
+          </span>
+<span class="px-2 py-1 rounded bg-secondary-container/30 text-on-secondary-fixed-variant font-label-md text-label-md font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">bolt</span> Electric Bus
+          </span>
+</div>
+<div class="flex flex-col items-end">
+<span class="font-title-md text-title-md text-secondary font-extrabold flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">schedule</span> 7 मिनट में
+          </span>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-semibold">900m दूर • Near Hathipole</span>
+</div>
+</div>
+<div class="flex flex-col gap-0.5">
+<div class="flex items-center gap-1.5 text-on-surface font-title-lg text-title-lg font-bold">
+<span>Railway Station</span>
+<span class="material-symbols-outlined text-[18px] text-primary">arrow_forward</span>
+<span>Amberi</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant font-medium">रेलवे स्टेशन ➔ आंबेरी</span>
+</div>
+<div class="p-2.5 rounded-lg bg-surface-container-low flex items-center justify-between text-on-surface">
+<div class="flex items-center gap-2 min-w-0">
+<span class="material-symbols-outlined text-primary text-[18px]">near_me</span>
+<span class="font-body-sm text-body-sm truncate"><strong class="font-bold">अगला स्टॉप:</strong> Hathipole (हाथीपोल)</span>
+</div>
+<span class="font-label-sm text-label-sm text-secondary font-bold uppercase tracking-wide">समय पर</span>
+</div>
+<div class="flex items-center justify-between pt-1">
+<div class="flex items-center gap-2 text-on-surface-variant font-body-sm text-body-sm">
+<span class="material-symbols-outlined text-[18px] text-secondary">airline_seat_recline_normal</span>
+<span>भीड़: सामान्य (Moderate)</span>
+</div>
+<button class="h-11 px-4 rounded-xl bg-secondary text-on-secondary font-title-md text-title-md font-bold shadow-sm active:scale-95 transition-all flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[18px]">fmd_good</span>
+<span>लाइव देखें / Track Live</span>
+</button>
+</div>
+</article>
+<!-- Bus Card 3: 7 -->
+<article class="p-4 rounded-xl bg-surface-container-lowest shadow-sm flex flex-col gap-3 transition-transform active:scale-[0.99]">
+<div class="flex items-start justify-between gap-2">
+<div class="flex items-center gap-2">
+<span class="px-3 py-1 rounded-lg bg-primary-container text-on-primary font-headline-sm text-headline-sm font-extrabold tracking-tight">
+            7
+          </span>
+<span class="px-2 py-1 rounded bg-surface-container-high text-on-surface-variant font-label-md text-label-md font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">directions_bus</span> City Bus (UCTSL)
+          </span>
+</div>
+<div class="flex flex-col items-end">
+<span class="font-title-md text-title-md text-secondary font-extrabold flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">schedule</span> 11 मिनट में
+          </span>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-semibold">1.4 km दूर • Delhi Gate</span>
+</div>
+</div>
+<div class="flex flex-col gap-0.5">
+<div class="flex items-center gap-1.5 text-on-surface font-title-lg text-title-lg font-bold">
+<span>Delhi Gate</span>
+<span class="material-symbols-outlined text-[18px] text-primary">arrow_forward</span>
+<span>Fatehpura</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant font-medium">दिल्ली गेट ➔ फतहपुरा</span>
+</div>
+<div class="p-2.5 rounded-lg bg-surface-container-low flex items-center justify-between text-on-surface">
+<div class="flex items-center gap-2 min-w-0">
+<span class="material-symbols-outlined text-primary text-[18px]">near_me</span>
+<span class="font-body-sm text-body-sm truncate"><strong class="font-bold">अगला स्टॉप:</strong> Shastri Circle (शास्त्री सर्कल)</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-bold uppercase tracking-wide">2m देरी</span>
+</div>
+<div class="flex items-center justify-between pt-1">
+<div class="flex items-center gap-2 text-on-surface-variant font-body-sm text-body-sm">
+<span class="material-symbols-outlined text-[18px] text-primary">airline_seat_recline_normal</span>
+<span>सीटें खाली: ~6 Seats</span>
+</div>
+<button class="h-11 px-4 rounded-xl bg-secondary text-on-secondary font-title-md text-title-md font-bold shadow-sm active:scale-95 transition-all flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[18px]">fmd_good</span>
+<span>लाइव देखें / Track Live</span>
+</button>
+</div>
+</article>
+<!-- Bus Card 4: 12 -->
+<article class="p-4 rounded-xl bg-surface-container-lowest shadow-sm flex flex-col gap-3 transition-transform active:scale-[0.99]">
+<div class="flex items-start justify-between gap-2">
+<div class="flex items-center gap-2">
+<span class="px-3 py-1 rounded-lg bg-primary-container text-on-primary font-headline-sm text-headline-sm font-extrabold tracking-tight">
+            12
+          </span>
+<span class="px-2 py-1 rounded bg-secondary-container/30 text-on-secondary-fixed-variant font-label-md text-label-md font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">bolt</span> Electric Bus
+          </span>
+</div>
+<div class="flex flex-col items-end">
+<span class="font-title-md text-title-md text-secondary font-extrabold flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">schedule</span> 16 मिनट में
+          </span>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-semibold">1.8 km दूर • Surajpole</span>
+</div>
+</div>
+<div class="flex flex-col gap-0.5">
+<div class="flex items-center gap-1.5 text-on-surface font-title-lg text-title-lg font-bold">
+<span>Surajpole</span>
+<span class="material-symbols-outlined text-[18px] text-primary">arrow_forward</span>
+<span>Rani Road</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant font-medium">सूरजपोल ➔ रानी रोड</span>
+</div>
+<div class="p-2.5 rounded-lg bg-surface-container-low flex items-center justify-between text-on-surface">
+<div class="flex items-center gap-2 min-w-0">
+<span class="material-symbols-outlined text-primary text-[18px]">near_me</span>
+<span class="font-body-sm text-body-sm truncate"><strong class="font-bold">अगला स्टॉप:</strong> Chetak Circle (चेतक सर्कल)</span>
+</div>
+<span class="font-label-sm text-label-sm text-secondary font-bold uppercase tracking-wide">समय पर</span>
+</div>
+<div class="flex items-center justify-between pt-1">
+<div class="flex items-center gap-2 text-on-surface-variant font-body-sm text-body-sm">
+<span class="material-symbols-outlined text-[18px] text-secondary">airline_seat_recline_normal</span>
+<span>भीड़: कम (Available)</span>
+</div>
+<button class="h-11 px-4 rounded-xl bg-secondary text-on-secondary font-title-md text-title-md font-bold shadow-sm active:scale-95 transition-all flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[18px]">fmd_good</span>
+<span>लाइव देखें / Track Live</span>
+</button>
+</div>
+</article>
+</section>
+<!-- Nearby Bus Stops Section (Walk Distance) -->
+<section class="px-gutter mt-4 mb-3 flex flex-col gap-3">
+<div class="flex items-center justify-between">
+<div class="flex flex-col">
+<span class="font-title-md text-title-md text-on-surface font-bold">पास के बस स्टॉप • Nearby Bus Stops</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">पैदल दूरी एवं समय (Walking Time)</span>
+</div>
+<button class="px-2.5 py-1 rounded-lg bg-surface-container-high text-primary font-label-md text-label-md font-bold">
+        सभी देखें
+      </button>
+</div>
+<div class="p-3.5 rounded-xl bg-surface-container-lowest shadow-sm flex flex-col gap-3">
+<!-- Stop 1 -->
+<div class="flex items-center justify-between py-1">
+<div class="flex items-center gap-2.5 min-w-0">
+<div class="w-9 h-9 rounded-lg bg-surface-container-high text-primary flex items-center justify-center flex-shrink-0">
+<span class="material-symbols-outlined text-[20px]">signpost</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-title-md text-title-md text-on-surface font-bold truncate">Chetak Circle Stop 1</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">चेतक सर्कल बस स्टैंड १</span>
+</div>
+</div>
+<div class="flex flex-col items-end flex-shrink-0">
+<span class="font-title-md text-title-md text-secondary font-bold">120m</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-medium">पैदल 2 मिनट</span>
+</div>
+</div>
+<div class="h-[1px] bg-surface-container w-full"></div>
+<!-- Stop 2 -->
+<div class="flex items-center justify-between py-1">
+<div class="flex items-center gap-2.5 min-w-0">
+<div class="w-9 h-9 rounded-lg bg-surface-container-high text-primary flex items-center justify-center flex-shrink-0">
+<span class="material-symbols-outlined text-[20px]">signpost</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-title-md text-title-md text-on-surface font-bold truncate">Mohta Park Stop</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">मोहता पार्क स्टॉप</span>
+</div>
+</div>
+<div class="flex flex-col items-end flex-shrink-0">
+<span class="font-title-md text-title-md text-secondary font-bold">450m</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-medium">पैदल 6 मिनट</span>
+</div>
+</div>
+<div class="h-[1px] bg-surface-container w-full"></div>
+<!-- Stop 3 -->
+<div class="flex items-center justify-between py-1">
+<div class="flex items-center gap-2.5 min-w-0">
+<div class="w-9 h-9 rounded-lg bg-surface-container-high text-primary flex items-center justify-center flex-shrink-0">
+<span class="material-symbols-outlined text-[20px]">signpost</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-title-md text-title-md text-on-surface font-bold truncate">Court Chauraha Stop</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">कोर्ट चौराहा स्टॉप</span>
+</div>
+</div>
+<div class="flex flex-col items-end flex-shrink-0">
+<span class="font-title-md text-title-md text-secondary font-bold">700m</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-medium">पैदल 9 मिनट</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Help & Accessibility Footer Note -->
+<section class="px-gutter pt-2 pb-6">
+<div class="p-3.5 rounded-xl bg-surface-container-low text-on-surface-variant flex items-center gap-3">
+<span class="material-symbols-outlined text-primary text-[22px] flex-shrink-0">info</span>
+<div class="flex flex-col text-[12px] leading-[16px]">
+<span class="font-bold text-on-surface">Udaipur City Transport (UCTSL) Live Feed</span>
+<span>स्थान आधारित अनुमान ट्रैफिक के अनुसार बदल सकता है। सुरक्षित यात्रा करें!</span>
+</div>
+</div>
+</section>
+</div></main><nav class="fixed bottom-0 w-full z-50 pb-safe bg-surface-container-lowest/90 backdrop-blur-xl shadow-[0_-10px_30px_-5px_rgba(11,25,44,0.08)]" data-active-classes="text-primary font-title-md relative after:content-[''] after:absolute after:-bottom-1 after:w-5 after:h-1 after:bg-primary-container after:rounded-full after:shadow-[0_0_12px_rgba(30,96,255,0.8)]"><div class="h-16 px-space-xs flex items-center justify-around"><a class="flex flex-col items-center justify-center min-w-[56px] h-11 text-on-surface-variant hover:text-on-surface transition-all gap-0.5" data-path="home" href="#"><span class="material-symbols-outlined text-[22px]">directions_bus</span><span class="font-label-sm text-label-sm">Home</span></a><a class="flex flex-col items-center justify-center min-w-[56px] h-11 text-on-surface-variant hover:text-on-surface transition-all gap-0.5" data-path="live-tracker" href="#"><span class="material-symbols-outlined text-[22px]">fmd_good</span><span class="font-label-sm text-label-sm">Live Track</span></a><a class="flex flex-col items-center justify-center min-w-[56px] h-11 text-on-surface-variant hover:text-on-surface transition-all gap-0.5" data-path="routes" href="#"><span class="material-symbols-outlined text-[22px]">alt_route</span><span class="font-label-sm text-label-sm">Routes</span></a><a class="flex flex-col items-center justify-center min-w-[56px] h-11 text-on-surface-variant hover:text-on-surface transition-all gap-0.5" data-path="radar" href="#"><span class="material-symbols-outlined text-[22px]">radar</span><span class="font-label-sm text-label-sm">Radar</span></a><a class="flex flex-col items-center justify-center min-w-[56px] h-11 text-on-surface-variant hover:text-on-surface transition-all gap-0.5" data-path="about" href="#"><span class="material-symbols-outlined text-[22px]">info</span><span class="font-label-sm text-label-sm">About</span></a></div></nav>
+
+
+</body></html>
