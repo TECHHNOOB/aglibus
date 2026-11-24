@@ -15,7 +15,9 @@ export default function BusMap({
   const busMarkersRef = useRef(new Map());
   const routePolylineRef = useRef(null);
   const stopMarkersRef = useRef([]);
+  const lastCenteredBusIdRef = useRef(null);
 
+  // Initialize Map
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const L = require('leaflet');
@@ -72,8 +74,8 @@ export default function BusMap({
       }).addTo(map);
       routePolylineRef.current = polyline;
 
-      // Fit bounds if no selected bus
-      if (!selectedBus) {
+      // Fit bounds only if no bus has been centered yet
+      if (!selectedBus && !lastCenteredBusIdRef.current) {
         map.fitBounds(polyline.getBounds(), { padding: [30, 30], maxZoom: 15 });
       }
     }
@@ -108,7 +110,7 @@ export default function BusMap({
       stopMarkersRef.current.push(marker);
     });
 
-  }, [routePoints, stops, activeStopIndex, selectedBus]);
+  }, [routePoints, stops, activeStopIndex]);
 
   // Update Buses on Map
   useEffect(() => {
@@ -165,9 +167,20 @@ export default function BusMap({
         const marker = currentMarkerMap.get(bus.id);
         marker.setLatLng([bus.lat, bus.lng]);
         marker.setIcon(customIcon);
+        // Update click listener to current bus object
+        marker.off('click');
+        marker.on('click', () => {
+          lastCenteredBusIdRef.current = bus.id;
+          map.setView([bus.lat, bus.lng], 15, { animate: true });
+          onSelectBus(bus);
+        });
       } else {
         const marker = L.marker([bus.lat, bus.lng], { icon: customIcon })
-          .on('click', () => onSelectBus(bus))
+          .on('click', () => {
+            lastCenteredBusIdRef.current = bus.id;
+            map.setView([bus.lat, bus.lng], 15, { animate: true });
+            onSelectBus(bus);
+          })
           .bindPopup(`<b>${bus.plateFormatted || bus.id}</b><br><span>${bus.routeTitle || 'PM e-Bus Udaipur'}</span><br><span style="font-size:11px;color:#006b5b;font-weight:bold">${Math.round(bus.speed || 0)} km/h</span>`)
           .addTo(map);
         currentMarkerMap.set(bus.id, marker);
@@ -182,11 +195,20 @@ export default function BusMap({
       }
     }
 
-    // Center on selected bus
+    // Center on selected bus ONLY when selectedBus ID changes (do NOT jump every 15s polling!)
     if (selectedBus && selectedBus.lat && selectedBus.lng) {
-      map.setView([selectedBus.lat, selectedBus.lng], 15, { animate: true });
+      if (lastCenteredBusIdRef.current !== selectedBus.id) {
+        lastCenteredBusIdRef.current = selectedBus.id;
+        map.setView([selectedBus.lat, selectedBus.lng], 15, { animate: true });
+      }
     }
   }, [buses, selectedBus, onSelectBus]);
+
+  const handleCenterSelectedBus = () => {
+    if (mapInstanceRef.current && selectedBus && selectedBus.lat && selectedBus.lng) {
+      mapInstanceRef.current.setView([selectedBus.lat, selectedBus.lng], 16, { animate: true });
+    }
+  };
 
   return (
     <div className="relative w-full h-[260px] md:h-[320px] bg-surface-container rounded-2xl overflow-hidden shadow-inner border border-outline-variant/30">
@@ -195,6 +217,18 @@ export default function BusMap({
         <span className="w-2 h-2 rounded-full bg-secondary animate-pulse" />
         <span>Live Map • उदयपुर</span>
       </div>
+
+      {selectedBus && (
+        <button
+          type="button"
+          onClick={handleCenterSelectedBus}
+          className="absolute bottom-3 right-3 z-[400] p-2 rounded-xl bg-surface/95 backdrop-blur-md border border-outline-variant/40 text-primary shadow-md flex items-center gap-1 text-xs font-bold active:scale-95 hover:bg-primary hover:text-on-primary transition-all"
+          title="Center on tracked bus"
+        >
+          <span className="material-symbols-outlined text-[18px]">my_location</span>
+          <span>बस देखें</span>
+        </button>
+      )}
     </div>
   );
 }

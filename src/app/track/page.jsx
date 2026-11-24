@@ -27,7 +27,7 @@ function LiveTrackerContent() {
   const [routes, setRoutes] = useState([]);
   const [stops, setStops] = useState([]);
   const [selectedRouteId, setSelectedRouteId] = useState(routeParam || '4');
-  const [selectedBus, setSelectedBus] = useState(null);
+  const [selectedBusId, setSelectedBusId] = useState(busParam || null);
   const [isLoading, setIsLoading] = useState(true);
   const [lastUpdatedSec, setLastUpdatedSec] = useState(0);
   const [alarmActive, setAlarmActive] = useState(false);
@@ -60,21 +60,17 @@ function LiveTrackerContent() {
           setFleetData(data);
           setLastUpdatedSec(0);
 
-          // If bus param provided in URL, auto select it
-          if (busParam) {
-            const found = data.buses.find(b => b.id.toLowerCase() === busParam.toLowerCase());
-            if (found) {
-              setSelectedBus(found);
-              if (found.routeId && !routeParam) setSelectedRouteId(found.routeId);
-            }
-          } else if (!routeParam && !selectedBus) {
-            // Auto pick the first moving or active bus
-            const activeBus = data.buses.find(b => b.speed > 5) || data.buses[0];
-            if (activeBus) {
-              setSelectedBus(activeBus);
-              if (activeBus.routeId) setSelectedRouteId(activeBus.routeId);
-            }
-          }
+          // Initial selection only: if no bus is currently selected, pick one
+          setSelectedBusId(prevId => {
+            if (prevId) return prevId; // Keep existing selected bus!
+            if (busParam) return busParam;
+            // Pick a moving bus or first bus on the route
+            const activeOnRoute = data.buses.find(b => b.routeId === selectedRouteId && b.speed > 0)
+              || data.buses.find(b => b.routeId === selectedRouteId)
+              || data.buses.find(b => b.speed > 5)
+              || data.buses[0];
+            return activeOnRoute ? activeOnRoute.id : null;
+          });
         }
       } catch (err) {
         console.error('Fleet polling failed:', err);
@@ -86,7 +82,7 @@ function LiveTrackerContent() {
     fetchFleet();
     timer = setInterval(fetchFleet, 15000);
     return () => clearInterval(timer);
-  }, [busParam, routeParam]);
+  }, [selectedRouteId, busParam]);
 
   // Second counter for "updated X sec ago"
   useEffect(() => {
@@ -124,8 +120,45 @@ function LiveTrackerContent() {
     return matched.length ? matched : list.slice(0, 5);
   }, [fleetData, selectedRouteId]);
 
-  // Active bus
-  const currentBus = selectedBus || matchingBuses[0] || null;
+  // Active bus: always resolve from fresh fleetData using selectedBusId
+  const currentBus = useMemo(() => {
+    if (selectedBusId && fleetData.buses && fleetData.buses.length > 0) {
+      const found = fleetData.buses.find(b => b.id.toLowerCase() === selectedBusId.toLowerCase());
+      if (found) return found;
+    }
+    return matchingBuses[0] || fleetData.buses?.[0] || null;
+  }, [selectedBusId, fleetData, matchingBuses]);
+
+  // Handle bus selection (from map click or selector pills)
+  const handleSelectBus = (bus) => {
+    if (!bus) return;
+    setSelectedBusId(bus.id);
+    if (bus.routeId && bus.routeId !== selectedRouteId) {
+      setSelectedRouteId(bus.routeId);
+    }
+    // Update URL query parameters without reloading
+    const params = new URLSearchParams(window.location.search);
+    params.set('bus', bus.id);
+    if (bus.routeId) params.set('route', bus.routeId);
+    window.history.replaceState(null, '', `?${params.toString()}`);
+  };
+
+  // Handle route change
+  const handleSelectRoute = (newRouteId) => {
+    setSelectedRouteId(newRouteId);
+    // Auto-select first bus on the newly chosen route
+    const busOnRoute = fleetData.buses?.find(b => b.routeId === newRouteId);
+    if (busOnRoute) {
+      setSelectedBusId(busOnRoute.id);
+    } else {
+      setSelectedBusId(null);
+    }
+    const params = new URLSearchParams(window.location.search);
+    params.set('route', newRouteId);
+    if (busOnRoute) params.set('bus', busOnRoute.id);
+    else params.delete('bus');
+    window.history.replaceState(null, '', `?${params.toString()}`);
+  };
 
   // Compute active stop index along the route
   const currentStopIndex = useMemo(() => {
@@ -196,10 +229,7 @@ function LiveTrackerContent() {
         {/* Change Route Dropdown */}
         <select
           value={selectedRouteId}
-          onChange={(e) => {
-            setSelectedRouteId(e.target.value);
-            setSelectedBus(null);
-          }}
+          onChange={(e) => handleSelectRoute(e.target.value)}
           className="bg-surface-container-lowest/20 hover:bg-surface-container-lowest/30 text-on-primary font-bold text-xs py-1.5 px-2 rounded-lg border border-on-primary/30 focus:outline-none focus:ring-1 focus:ring-white cursor-pointer max-w-[130px] truncate"
         >
           {routes.map(r => (
@@ -209,6 +239,39 @@ function LiveTrackerContent() {
           ))}
         </select>
       </section>
+
+      {/* Quick Bus Selector Tray: Allows easy switching between active buses on this route */}
+      {matchingBuses.length > 0 && (
+        <section className="bg-surface-container-low px-4 py-2 border-b border-outline-variant/30 flex items-center gap-2 overflow-x-auto no-scrollbar">
+          <span className="text-[11px] font-bold text-on-surface-variant uppercase shrink-0">
+            {lang === 'hi' ? 'बस चुनें:' : 'Select Bus:'}
+          </span>
+          {matchingBuses.map(bus => {
+            const isSelected = currentBus && currentBus.id === bus.id;
+            const busPlate = bus.plateFormatted || formatBusPlate(bus.id);
+            const busMoving = bus.speed && bus.speed >= 2;
+
+            return (
+              <button
+                key={bus.id}
+                type="button"
+                onClick={() => handleSelectBus(bus)}
+                className={`px-3 py-1 rounded-full text-xs font-extrabold shrink-0 flex items-center gap-1.5 transition-all shadow-2xs ${
+                  isSelected
+                    ? 'bg-primary text-on-primary shadow-xs ring-2 ring-primary/30'
+                    : 'bg-surface-container-lowest text-on-surface border border-outline-variant/30 hover:bg-surface-container'
+                }`}
+              >
+                <span className={`w-2 h-2 rounded-full ${busMoving ? 'bg-secondary animate-pulse' : 'bg-outline'}`} />
+                <span>{busPlate}</span>
+                <span className="text-[10px] opacity-85">
+                  {busMoving ? `${Math.round(bus.speed)}km/h` : (lang === 'hi' ? 'खड़ी है' : 'Halt')}
+                </span>
+              </button>
+            );
+          })}
+        </section>
+      )}
 
       {/* Live Status & Speed Bar (Iconic Where Is My Train Banner) */}
       <section className="bg-secondary text-on-secondary px-4 py-2.5 flex items-center justify-between shadow-xs">
@@ -236,7 +299,7 @@ function LiveTrackerContent() {
         <BusMap
           buses={matchingBuses}
           selectedBus={currentBus}
-          onSelectBus={setSelectedBus}
+          onSelectBus={handleSelectBus}
           routePoints={activeRoute?.points || []}
           stops={routeStops}
           activeStopIndex={currentStopIndex}

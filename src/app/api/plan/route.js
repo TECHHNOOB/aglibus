@@ -41,36 +41,55 @@ export async function GET(request) {
     }, { status: 404 });
   }
 
-  const plans = planTrips(fromId, toId, passengerRoutes);
+  const rawPlans = planTrips(fromId, toId, passengerRoutes) || [];
   
-  const enriched = plans.map(p => ({
-    totalMinutes: p.minutes,
-    transferCount: p.legs.length - 1,
-    legs: p.legs.map(leg => ({
-      routeId: leg.route.id,
-      routeCode: leg.route.code,
-      routeTitle: leg.route.title,
-      routeTitleEn: leg.route.titleEn,
-      agency: leg.route.agency,
-      minutes: leg.minutes,
-      fromStop: {
-        id: leg.from,
-        name: stopNames[leg.from] || `Stop #${leg.from}`,
-        english: stopEnglish[leg.from] || null
-      },
-      toStop: {
-        id: leg.to,
-        name: stopNames[leg.to] || `Stop #${leg.to}`,
-        english: stopEnglish[leg.to] || null
-      },
-      stopsCount: leg.stops.length,
-      stopSequence: leg.stops.map(s => ({
-        id: s,
-        name: stopNames[s] || `Stop #${s}`,
-        english: stopEnglish[s] || null
+  // Deduplicate and enrich
+  const seenRouteSignatures = new Set();
+  const enriched = [];
+
+  for (const p of rawPlans) {
+    const signature = p.legs.map(l => `${l.route.id}:${l.from}->${l.to}`).join('|');
+    if (seenRouteSignatures.has(signature)) continue;
+    seenRouteSignatures.add(signature);
+
+    enriched.push({
+      totalMinutes: p.minutes,
+      minutes: p.minutes,
+      transferCount: p.legs.length - 1,
+      legs: p.legs.map(leg => ({
+        id: leg.route.id,
+        routeId: leg.route.id,
+        code: leg.route.code,
+        routeCode: leg.route.code,
+        title: leg.route.title,
+        routeTitle: leg.route.title,
+        titleEn: leg.route.titleEn || leg.route.title,
+        routeTitleEn: leg.route.titleEn || leg.route.title,
+        agency: leg.route.agency,
+        minutes: leg.minutes,
+        from: stopNames[leg.from] || `Stop #${leg.from}`,
+        to: stopNames[leg.to] || `Stop #${leg.to}`,
+        fromStop: {
+          id: leg.from,
+          name: stopNames[leg.from] || `Stop #${leg.from}`,
+          english: stopEnglish[leg.from] || stopNames[leg.from] || `Stop #${leg.from}`
+        },
+        toStop: {
+          id: leg.to,
+          name: stopNames[leg.to] || `Stop #${leg.to}`,
+          english: stopEnglish[leg.to] || stopNames[leg.to] || `Stop #${leg.to}`
+        },
+        stopsCount: leg.stops.length,
+        stopSequence: leg.stops.map(s => ({
+          id: s,
+          name: stopNames[s] || `Stop #${s}`,
+          english: stopEnglish[s] || stopNames[s] || `Stop #${s}`
+        }))
       }))
-    }))
-  }));
+    });
+
+    if (enriched.length >= 8) break; // Keep top 8 best recommendations
+  }
 
   return NextResponse.json({
     from: { id: fromId, name: stopNames[fromId], english: stopEnglish[fromId] },

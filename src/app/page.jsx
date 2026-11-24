@@ -306,52 +306,77 @@ export default function HomePage() {
           </div>
 
           <div className="flex flex-col gap-2.5">
-            {tripPlan.plans.map((opt, i) => (
-              <div
-                key={i}
-                className="bg-surface-container-lowest rounded-2xl p-4 shadow-sm border border-outline-variant/30 flex flex-col gap-3 hover:border-primary/40 transition-colors"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="px-2.5 py-1 rounded-lg bg-primary text-on-primary font-bold text-xs">
-                      {opt.legs.map(l => l.code).join(' ➔ ')}
-                    </span>
-                    <span className="text-xs text-on-surface-variant font-medium">
-                      {opt.legs.length === 1 ? (lang === 'hi' ? 'सीधा रूट' : 'Direct Route') : (lang === 'hi' ? '1 ट्रांसफर' : '1 Transfer')}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1 text-primary font-bold text-sm">
-                    <span className="material-symbols-outlined text-[16px]">schedule</span>
-                    <span>~{opt.minutes} {t('minutes')}</span>
-                  </div>
-                </div>
+            {tripPlan.plans.map((opt, i) => {
+              const totalMin = opt.totalMinutes || opt.minutes || 15;
+              const isDirect = (opt.transferCount != null ? opt.transferCount : opt.legs.length - 1) === 0;
+              const routePillLabel = opt.legs.map(l => l.routeCode || l.code || l.routeId || l.id).join(' ➔ ');
+              const primaryRouteId = opt.legs[0]?.routeId || opt.legs[0]?.id || '4';
 
-                {/* Route legs detail */}
-                <div className="flex flex-col gap-1.5 pl-2 border-l-2 border-primary/30">
-                  {opt.legs.map((leg, legIdx) => (
-                    <div key={legIdx} className="text-xs">
-                      <span className="font-bold text-on-surface">{leg.code} ({leg.title})</span>
-                      <span className="block text-[11px] text-on-surface-variant">
-                        {leg.from} ➔ {leg.to} ({leg.stopsCount} stops)
+              return (
+                <div
+                  key={i}
+                  className="bg-surface-container-lowest rounded-2xl p-4 shadow-sm border border-outline-variant/30 flex flex-col gap-3 hover:border-primary/40 transition-colors"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2.5 py-1 rounded-lg bg-primary text-on-primary font-extrabold text-xs shadow-2xs">
+                        {routePillLabel}
+                      </span>
+                      <span className="text-xs text-on-surface-variant font-medium">
+                        {isDirect ? (lang === 'hi' ? 'सीधा रूट' : 'Direct Route') : (lang === 'hi' ? '1 ट्रांसफर' : '1 Transfer')}
                       </span>
                     </div>
-                  ))}
-                </div>
+                    <div className="flex items-center gap-1 text-primary font-bold text-sm">
+                      <span className="material-symbols-outlined text-[16px]">schedule</span>
+                      <span>~{totalMin} {t('minutes')}</span>
+                    </div>
+                  </div>
 
-                <div className="flex items-center justify-between pt-2 border-t border-surface-container">
-                  <span className="text-xs font-bold text-secondary">
-                    {lang === 'hi' ? 'किराया: ₹10 - ₹20' : 'Fare: ₹10 - ₹20'}
-                  </span>
-                  <Link
-                    href={`/track?route=${opt.legs[0].id}`}
-                    className="px-3 py-1.5 rounded-lg bg-primary text-on-primary text-xs font-bold flex items-center gap-1 active:scale-95 transition-all shadow-xs"
-                  >
-                    <span className="material-symbols-outlined text-[16px]">radar</span>
-                    <span>{t('trackLive')}</span>
-                  </Link>
+                  {/* Route legs detail */}
+                  <div className="flex flex-col gap-2 pl-2 border-l-2 border-primary/30">
+                    {opt.legs.map((leg, legIdx) => {
+                      const legCode = leg.routeCode || leg.code || leg.routeId || '';
+                      const legTitle = lang === 'en'
+                        ? (leg.routeTitleEn || leg.titleEn || leg.routeTitle || leg.title)
+                        : (leg.routeTitle || leg.title || leg.routeTitleEn);
+                      const fromName = getStopDisplayName(leg.fromStop || leg.from);
+                      const toName = getStopDisplayName(leg.toStop || leg.to);
+                      const stopsNum = leg.stopsCount || (leg.stopSequence ? leg.stopSequence.length : 0);
+
+                      return (
+                        <div key={legIdx} className="text-xs flex flex-col gap-0.5">
+                          <div className="flex items-center gap-1.5 font-bold text-on-surface">
+                            <span className="px-1.5 py-0.2 rounded bg-surface-container-high text-primary font-extrabold text-[10px]">
+                              {legCode}
+                            </span>
+                            <span className="truncate">{legTitle}</span>
+                          </div>
+                          <div className="text-[12px] text-on-surface-variant flex items-center gap-1 mt-0.5">
+                            <span className="font-semibold text-on-surface">{fromName}</span>
+                            <span className="material-symbols-outlined text-[13px] text-primary">arrow_forward</span>
+                            <span className="font-semibold text-on-surface">{toName}</span>
+                            <span className="text-secondary font-medium">({stopsNum} {lang === 'hi' ? 'स्टॉप्स' : 'stops'})</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-surface-container">
+                    <span className="text-xs font-bold text-secondary">
+                      {lang === 'hi' ? 'किराया: ₹10 - ₹20' : 'Fare: ₹10 - ₹20'}
+                    </span>
+                    <Link
+                      href={`/track?route=${primaryRouteId}`}
+                      className="px-3.5 py-1.5 rounded-xl bg-primary hover:bg-primary/95 text-on-primary text-xs font-bold flex items-center gap-1 active:scale-95 transition-all shadow-xs"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">radar</span>
+                      <span>{t('trackLive')}</span>
+                    </Link>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
       )}
