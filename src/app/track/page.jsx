@@ -199,6 +199,30 @@ function LiveTrackerContent() {
 
   const currentHaltStop = routeStops[currentStopIndex] || routeStops[0] || { name: 'आरंभिक स्टॉप', english: 'Origin Stop' };
 
+  // Calculate dynamic ETA time for each stop based on current bus position & time
+  const getStopETA = (index) => {
+    const now = new Date();
+    const totalRouteMin = activeRoute?.minutes || 35;
+    const totalStops = Math.max(1, routeStops.length - 1);
+    const avgMinPerStop = Math.max(2, Math.round(totalRouteMin / totalStops));
+
+    const diff = index - currentStopIndex;
+    const targetTimestamp = new Date(now.getTime() + diff * avgMinPerStop * 60000);
+
+    let h = targetTimestamp.getHours();
+    const m = targetTimestamp.getMinutes().toString().padStart(2, '0');
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    const timeStr = `${h}:${m} ${ampm}`;
+    const etaMinutes = Math.abs(diff * avgMinPerStop);
+
+    return {
+      timeStr,
+      etaMinutes,
+      diff
+    };
+  };
+
   const handleShare = () => {
     const busPlate = currentBus?.plateFormatted || formatBusPlate(currentBus?.id);
     const text = `Live Tracking Bus ${busPlate} on ${getRouteTitle(activeRoute) || 'Udaipur City Transit'}. Live ETA and Stop Progress: ${window.location.href}`;
@@ -371,6 +395,7 @@ function LiveTrackerContent() {
             const isCurrent = index === currentStopIndex;
             const isNext = index === currentStopIndex + 1;
             const isFinal = index === routeStops.length - 1;
+            const stopEta = getStopETA(index);
 
             return (
               <div key={stop.id || index} className="relative flex items-start gap-3 py-2.5">
@@ -396,7 +421,7 @@ function LiveTrackerContent() {
 
                 {/* Stop Card */}
                 <div
-                  className={`flex-1 flex items-start justify-between p-3 rounded-xl border transition-all ${
+                  className={`flex-1 flex items-center justify-between p-3 rounded-xl border transition-all ${
                     isCurrent
                       ? 'bg-surface-container-lowest border-2 border-secondary shadow-md'
                       : isNext
@@ -406,7 +431,7 @@ function LiveTrackerContent() {
                       : 'bg-surface-container-lowest border-outline-variant/30'
                   }`}
                 >
-                  <div className="flex flex-col min-w-0">
+                  <div className="flex flex-col min-w-0 pr-2">
                     <div className="flex items-center gap-1.5">
                       <span className={`text-[15px] font-bold ${isDeparted ? 'line-through text-on-surface-variant' : 'text-on-surface'}`}>
                         {getStopDisplayName(stop)}
@@ -436,10 +461,39 @@ function LiveTrackerContent() {
                     ) : null}
                   </div>
 
-                  <div className="text-right flex-shrink-0">
-                    <span className={`text-xs font-bold ${isCurrent ? 'text-secondary' : isNext ? 'text-primary' : 'text-on-surface-variant'}`}>
-                      Stop #{index + 1}
-                    </span>
+                  {/* Real-time ETA Display (Replaces generic Stop #X) */}
+                  <div className="text-right flex-shrink-0 flex flex-col items-end justify-center">
+                    {isCurrent ? (
+                      <>
+                        <span className="text-[14px] font-black text-secondary tracking-tight leading-tight">
+                          {stopEta.timeStr}
+                        </span>
+                        <span className="px-2 py-0.5 rounded-full bg-secondary-fixed text-on-secondary-fixed text-[10px] font-extrabold flex items-center gap-1 mt-1 shadow-2xs">
+                          <span className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse" />
+                          <span>{lang === 'hi' ? 'वर्तमान (Live)' : 'Live Now'}</span>
+                        </span>
+                      </>
+                    ) : isDeparted ? (
+                      <>
+                        <span className="text-[12px] font-semibold text-outline line-through leading-tight">
+                          {stopEta.timeStr}
+                        </span>
+                        <span className="text-[10px] font-bold text-outline/80 mt-0.5">
+                          {lang === 'hi' ? 'छूट चुकी' : 'Departed'}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span className={`text-[14px] font-black tracking-tight leading-tight ${isNext ? 'text-primary' : 'text-on-surface'}`}>
+                          {stopEta.timeStr}
+                        </span>
+                        <span className={`text-[10.5px] font-extrabold mt-0.5 ${isNext ? 'text-primary' : 'text-secondary'}`}>
+                          {stopEta.etaMinutes <= 1
+                            ? (lang === 'hi' ? 'पहुँचने वाली' : 'Arriving')
+                            : `~${stopEta.etaMinutes} ${lang === 'hi' ? 'मिनट' : 'mins'}`}
+                        </span>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>

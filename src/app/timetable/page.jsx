@@ -554,7 +554,9 @@ export default function TimetablePage() {
                     </div>
 
                     <span className="text-[11px] font-bold text-secondary shrink-0">
-                      Stop #{sIdx + 1}
+                      {sIdx === 0
+                        ? (lang === 'hi' ? 'आरंभ (Origin)' : 'Origin')
+                        : `+${Math.round(sIdx * (activeRoute.minutes || 45) / Math.max(1, routeStops.length - 1))} ${lang === 'hi' ? 'मिनट (ETA)' : 'min (ETA)'}`}
                     </span>
                   </div>
 
