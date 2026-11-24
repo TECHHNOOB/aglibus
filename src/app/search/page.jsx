@@ -669,7 +669,7 @@ function SearchResultsContent() {
                 {/* Action Buttons: Big Live Track CTA + Stops Accordion Toggle */}
                 <div className="flex items-center gap-2 pt-0.5">
                   <Link
-                    href={`/track?route=${primaryRouteId}${nextUpcomingBus ? `&bus=${nextUpcomingBus.id}` : ''}`}
+                    href={`/track?route=${primaryRouteId}${nextUpcomingBus ? `&bus=${nextUpcomingBus.id}` : ''}&dir=${primaryLeg?.isReverse ? 'reverse' : 'forward'}&from=${primaryLeg?.fromStop?.id ?? ''}&to=${primaryLeg?.toStop?.id ?? ''}`}
                     className="flex-1 h-11 bg-secondary hover:bg-secondary/90 active:scale-[0.98] text-on-secondary rounded-xl flex items-center justify-center gap-2 font-bold text-xs shadow-xs transition-all"
                   >
                     <span className="material-symbols-outlined text-[19px]">near_me</span>

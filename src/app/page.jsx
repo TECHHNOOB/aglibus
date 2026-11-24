@@ -484,7 +484,7 @@ export default function HomePage() {
                                 {routeUpcomingBuses.map((bus) => (
                                   <Link
                                     key={bus.id}
-                                    href={`/track?route=${leg.routeId}&bus=${bus.id}`}
+                                    href={`/track?route=${leg.routeId}&bus=${bus.id}&dir=${leg.isReverse ? 'reverse' : 'forward'}&from=${leg.fromStop?.id ?? leg.from}&to=${leg.toStop?.id ?? leg.to}`}
                                     className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface-container-lowest hover:bg-primary hover:text-on-primary border border-outline-variant/40 text-on-surface font-bold text-[11px] transition-all shadow-2xs group"
                                     title={lang === 'hi' ? `${bus.plate} को मैप पर ट्रैक करें` : `Track ${bus.plate} on map`}
                                   >
@@ -519,13 +519,20 @@ export default function HomePage() {
                     <span className="text-xs font-bold text-secondary">
                       {lang === 'hi' ? 'किराया: ₹10 - ₹20' : 'Fare: ₹10 - ₹20'}
                     </span>
-                    <Link
-                      href={`/track?route=${primaryRouteId}`}
-                      className="px-3.5 py-1.5 rounded-xl bg-primary hover:bg-primary/95 text-on-primary text-xs font-bold flex items-center gap-1 active:scale-95 transition-all shadow-xs"
-                    >
-                      <span className="material-symbols-outlined text-[16px]">radar</span>
-                      <span>{t('trackLive')}</span>
-                    </Link>
+                    {(() => {
+                      const firstLeg = opt.legs[0];
+                      const bestBus = firstLeg?.nextUpcomingBus || firstLeg?.upcomingBuses?.[0] || null;
+                      const trackUrl = `/track?route=${firstLeg?.routeId || primaryRouteId}${bestBus ? `&bus=${bestBus.id}` : ''}&dir=${firstLeg?.isReverse ? 'reverse' : 'forward'}&from=${firstLeg?.fromStop?.id ?? ''}&to=${firstLeg?.toStop?.id ?? ''}`;
+                      return (
+                        <Link
+                          href={trackUrl}
+                          className="px-3.5 py-1.5 rounded-xl bg-primary hover:bg-primary/95 text-on-primary text-xs font-bold flex items-center gap-1 active:scale-95 transition-all shadow-xs"
+                        >
+                          <span className="material-symbols-outlined text-[16px]">radar</span>
+                          <span>{t('trackLive')}</span>
+                        </Link>
+                      );
+                    })()}
                   </div>
                 </div>
               );

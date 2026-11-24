@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
 import { useLanguage } from '@/components/LanguageContext';
+import { dutyRouteHints, stopLocations } from '@/lib/network.mjs';
 
 // Dynamically import BusMap with SSR disabled
 const BusMap = dynamic(() => import('@/components/BusMap'), {
@@ -16,10 +17,28 @@ const BusMap = dynamic(() => import('@/components/BusMap'), {
   )
 });
 
+function getDistanceMeters(lat1, lon1, lat2, lon2) {
+  if (!lat1 || !lon1 || !lat2 || !lon2) return Infinity;
+  const R = 6371000;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function cleanRouteId(rId) {
+  return String(rId || '').replace(/^PM/i, '').replace(/^R/i, 'U').trim();
+}
+
 function LiveTrackerContent() {
   const searchParams = useSearchParams();
   const routeParam = searchParams.get('route');
   const busParam = searchParams.get('bus');
+  const dirParam = searchParams.get('dir');
+  const fromParam = searchParams.get('from');
+  const toParam = searchParams.get('to');
 
   const { lang, t, getStopDisplayName, getRouteTitle, formatBusPlate } = useLanguage();
 
@@ -28,6 +47,7 @@ function LiveTrackerContent() {
   const [stops, setStops] = useState([]);
   const [selectedRouteId, setSelectedRouteId] = useState(routeParam || '4');
   const [selectedBusId, setSelectedBusId] = useState(busParam || null);
+  const [isReverse, setIsReverse] = useState(dirParam === 'reverse');
   const [isLoading, setIsLoading] = useState(true);
   const [lastUpdatedSec, setLastUpdatedSec] = useState(0);
   const [alarmActive, setAlarmActive] = useState(false);
@@ -63,6 +83,79 @@ function LiveTrackerContent() {
     }
   }, [busParam]);
 
+  // Synchronize direction based on dir query or from/to stop sequence
+  useEffect(() => {
+    if (dirParam === 'reverse') {
+      setIsReverse(true);
+      return;
+    }
+    if (dirParam === 'forward') {
+      setIsReverse(false);
+      return;
+    }
+    if (fromParam && toParam && routes.length > 0) {
+      const active = routes.find(r => r.id === selectedRouteId || r.code === selectedRouteId);
+      if (active && active.stops) {
+        const fId = Number(fromParam);
+        const tId = Number(toParam);
+        const fIdx = active.stops.indexOf(fId);
+        const tIdx = active.stops.indexOf(tId);
+        if (fIdx >= 0 && tIdx >= 0) {
+          setIsReverse(fIdx > tIdx);
+        }
+      }
+    }
+  }, [dirParam, fromParam, toParam, routes, selectedRouteId]);
+
+  // Currently selected route details
+  const activeRoute = useMemo(() => {
+    return routes.find(r => r.id === selectedRouteId || r.code === selectedRouteId) || routes[0] || null;
+  }, [routes, selectedRouteId]);
+
+  // Directional Title (e.g. Chetak -> Kanpur vs Kanpur -> Chetak)
+  const directionalTitle = useMemo(() => {
+    if (!activeRoute) return '';
+    const fullTitle = lang === 'en' ? (activeRoute.titleEn || activeRoute.title) : activeRoute.title;
+    if (!isReverse) return fullTitle;
+    const parts = fullTitle.split(/\s*(?:→|➔|↔)\s*/);
+    if (parts.length === 2) {
+      return `${parts[1]} ➔ ${parts[0]}`;
+    }
+    return fullTitle;
+  }, [activeRoute, isReverse, lang]);
+
+  // Ordered Stops on this route based on travel direction
+  const routeStops = useMemo(() => {
+    if (!activeRoute || !stops.length) return [];
+    const baseStops = activeRoute.stops || [];
+    const orderedIds = isReverse ? [...baseStops].reverse() : baseStops;
+    return orderedIds.map(id => {
+      const match = stops.find(s => s.id === id);
+      return match || { id, name: `Stop #${id}`, english: `Stop #${id}`, coordinates: stopLocations[id] || null };
+    });
+  }, [activeRoute, stops, isReverse]);
+
+  // Filter buses that genuinely belong to this route (ZERO FOREIGN BUS FALLBACK)
+  const matchingBuses = useMemo(() => {
+    const list = fleetData.buses || [];
+    if (!selectedRouteId || !activeRoute) return [];
+
+    const curRId = String(activeRoute.id || selectedRouteId);
+    const curCode = String(activeRoute.code || selectedRouteId);
+    const curClean = cleanRouteId(curRId);
+
+    return list.filter(bus => {
+      const bHint = dutyRouteHints[bus.id] ? String(dutyRouteHints[bus.id]) : '';
+      if (bHint && (bHint === curRId || bHint === curClean)) return true;
+      if (bus.routeId === curRId || bus.routeId === curCode || cleanRouteId(bus.routeId) === curClean) return true;
+      if (bus.routeCode && (bus.routeCode === curCode || cleanRouteId(bus.routeCode) === curClean)) return true;
+      if (bus.matches && bus.matches.some(m => m.routeId === curRId || cleanRouteId(m.routeId) === curClean)) return true;
+      if (bus.assignment && (bus.assignment === curRId || bus.assignment === curCode || bus.assignment.endsWith(curClean))) return true;
+      if (bus.route && (bus.route.includes(curRId) || bus.route.includes(curCode))) return true;
+      return false;
+    });
+  }, [fleetData, selectedRouteId, activeRoute]);
+
   // Poll Fleet data every 15 seconds
   useEffect(() => {
     let timer;
@@ -73,18 +166,6 @@ function LiveTrackerContent() {
           const data = await res.json();
           setFleetData(data);
           setLastUpdatedSec(0);
-
-          // Initial selection only: if no bus is currently selected, pick one
-          setSelectedBusId(prevId => {
-            if (prevId) return prevId; // Keep existing selected bus!
-            if (busParam) return busParam;
-            // Pick a moving bus or first bus on the route
-            const activeOnRoute = data.buses.find(b => b.routeId === selectedRouteId && b.speed > 0)
-              || data.buses.find(b => b.routeId === selectedRouteId)
-              || data.buses.find(b => b.speed > 5)
-              || data.buses[0];
-            return activeOnRoute ? activeOnRoute.id : null;
-          });
         }
       } catch (err) {
         console.error('Fleet polling failed:', err);
@@ -96,7 +177,59 @@ function LiveTrackerContent() {
     fetchFleet();
     timer = setInterval(fetchFleet, 15000);
     return () => clearInterval(timer);
-  }, [selectedRouteId, busParam]);
+  }, [selectedRouteId]);
+
+  // Keep selected bus valid within matching buses
+  useEffect(() => {
+    if (matchingBuses.length === 0) {
+      setSelectedBusId(null);
+      return;
+    }
+    // If busParam matches a bus on route, select it
+    if (busParam && matchingBuses.some(b => b.id.toLowerCase() === busParam.toLowerCase())) {
+      setSelectedBusId(busParam);
+      return;
+    }
+    // Otherwise keep current or auto-select moving bus on this route
+    setSelectedBusId(prev => {
+      if (prev && matchingBuses.some(b => b.id.toLowerCase() === prev.toLowerCase())) {
+        return prev;
+      }
+      const moving = matchingBuses.find(b => b.speed > 0);
+      return moving ? moving.id : matchingBuses[0].id;
+    });
+  }, [matchingBuses, busParam]);
+
+  // Active bus: strictly from matchingBuses
+  const currentBus = useMemo(() => {
+    if (!matchingBuses.length) return null;
+    if (selectedBusId) {
+      const found = matchingBuses.find(b => b.id.toLowerCase() === selectedBusId.toLowerCase());
+      if (found) return found;
+    }
+    return matchingBuses[0] || null;
+  }, [selectedBusId, matchingBuses]);
+
+  // Compute active stop index along directional route stops
+  const currentStopIndex = useMemo(() => {
+    if (!currentBus || !routeStops.length) return 0;
+
+    let bestIdx = 0;
+    let minDist = Infinity;
+
+    routeStops.forEach((stop, idx) => {
+      const coords = stop.coordinates || stopLocations[stop.id];
+      if (coords && coords.length === 2) {
+        const d = getDistanceMeters(currentBus.lat, currentBus.lng, coords[0], coords[1]);
+        if (d < minDist) {
+          minDist = d;
+          bestIdx = idx;
+        }
+      }
+    });
+
+    return bestIdx;
+  }, [currentBus, routeStops]);
 
   // Second counter for "updated X sec ago"
   useEffect(() => {
@@ -106,98 +239,37 @@ function LiveTrackerContent() {
     return () => clearInterval(interval);
   }, []);
 
-  // Currently selected route details
-  const activeRoute = useMemo(() => {
-    return routes.find(r => r.id === selectedRouteId) || routes[0] || null;
-  }, [routes, selectedRouteId]);
-
-  // Stops on this route
-  const routeStops = useMemo(() => {
-    if (!activeRoute || !stops.length) return [];
-    return (activeRoute.stops || []).map(id => {
-      const match = stops.find(s => s.id === id);
-      return match || { id, name: `Stop #${id}`, english: `Stop #${id}`, coordinates: null };
-    });
-  }, [activeRoute, stops]);
-
-  // Filter buses that match this route or are live
-  const matchingBuses = useMemo(() => {
-    const list = fleetData.buses || [];
-    if (!selectedRouteId) return list;
-    const matched = list.filter(bus => {
-      if (bus.routeId === selectedRouteId) return true;
-      if (bus.matches && bus.matches.some(m => m.routeId === selectedRouteId)) return true;
-      if (bus.assignment && (bus.assignment === selectedRouteId || bus.assignment.endsWith(selectedRouteId))) return true;
-      if (bus.route && bus.route.includes(selectedRouteId)) return true;
-      return false;
-    });
-    return matched.length ? matched : list.slice(0, 5);
-  }, [fleetData, selectedRouteId]);
-
-  // Active bus: always resolve from fresh fleetData using selectedBusId
-  const currentBus = useMemo(() => {
-    if (selectedBusId && fleetData.buses && fleetData.buses.length > 0) {
-      const found = fleetData.buses.find(b => b.id.toLowerCase() === selectedBusId.toLowerCase());
-      if (found) return found;
-    }
-    return matchingBuses[0] || fleetData.buses?.[0] || null;
-  }, [selectedBusId, fleetData, matchingBuses]);
-
   // Handle bus selection (from map click or selector pills)
   const handleSelectBus = (bus) => {
     if (!bus) return;
     setSelectedBusId(bus.id);
-    if (bus.routeId && bus.routeId !== selectedRouteId) {
-      setSelectedRouteId(bus.routeId);
-    }
-    // Update URL query parameters without reloading
     const params = new URLSearchParams(window.location.search);
     params.set('bus', bus.id);
-    if (bus.routeId) params.set('route', bus.routeId);
     window.history.replaceState(null, '', `?${params.toString()}`);
   };
 
   // Handle route change
   const handleSelectRoute = (newRouteId) => {
     setSelectedRouteId(newRouteId);
-    // Auto-select first bus on the newly chosen route
-    const busOnRoute = fleetData.buses?.find(b => b.routeId === newRouteId);
-    if (busOnRoute) {
-      setSelectedBusId(busOnRoute.id);
-    } else {
-      setSelectedBusId(null);
-    }
+    setSelectedBusId(null);
     const params = new URLSearchParams(window.location.search);
     params.set('route', newRouteId);
-    if (busOnRoute) params.set('bus', busOnRoute.id);
-    else params.delete('bus');
+    params.delete('bus');
     window.history.replaceState(null, '', `?${params.toString()}`);
   };
 
-  // Compute active stop index along the route
-  const currentStopIndex = useMemo(() => {
-    if (!currentBus || !routeStops.length) return 0;
-    // Check nearestStop from API
-    if (currentBus.nearestStop?.id) {
-      const idx = routeStops.findIndex(s => s.id === currentBus.nearestStop.id);
-      if (idx >= 0) return idx;
-    }
-    // Check matches
-    if (currentBus.matches && currentBus.matches.length) {
-      const match = currentBus.matches.find(m => m.routeId === selectedRouteId) || currentBus.matches[0];
-      if (match?.position?.stopIds) {
-        const stopId = match.position.stopIds[0];
-        const idx = routeStops.findIndex(s => s.id === stopId);
-        if (idx >= 0) return idx;
-      }
-    }
-    return 0;
-  }, [currentBus, selectedRouteId, routeStops]);
+  // Toggle direction (Forward ⇄ Reverse)
+  const handleToggleDirection = () => {
+    const nextRev = !isReverse;
+    setIsReverse(nextRev);
+    const params = new URLSearchParams(window.location.search);
+    params.set('dir', nextRev ? 'reverse' : 'forward');
+    window.history.replaceState(null, '', `?${params.toString()}`);
+  };
 
   // Current speed display
   const isMoving = currentBus?.speed && currentBus.speed >= 2;
-  const speedDisplay = currentBus?.speed != null ? `${Math.round(currentBus.speed)} km/h` : (lang === 'hi' ? 'खड़ी है (Halt)' : 'At Halt');
-
+  const speedDisplay = currentBus?.speed != null ? `${Math.round(currentBus.speed)} km/h` : (lang === 'hi' ? 'खड़ी है' : 'Halt');
   const currentHaltStop = routeStops[currentStopIndex] || routeStops[0] || { name: 'आरंभिक स्टॉप', english: 'Origin Stop' };
 
   // Calculate dynamic ETA time for each stop based on current bus position & time
@@ -225,8 +297,8 @@ function LiveTrackerContent() {
   };
 
   const handleShare = () => {
-    const busPlate = currentBus?.plateFormatted || formatBusPlate(currentBus?.id);
-    const text = `Live Tracking Bus ${busPlate} on ${getRouteTitle(activeRoute) || 'Udaipur City Transit'}. Live ETA and Stop Progress: ${window.location.href}`;
+    const busPlate = currentBus?.plateFormatted || formatBusPlate(currentBus?.id) || 'City Bus';
+    const text = `Live Tracking Route ${activeRoute?.code || selectedRouteId} (${directionalTitle}) on AgliBus. Live ETA & Stops: ${window.location.href}`;
     if (navigator.share) {
       navigator.share({ title: 'AgliBus Live Tracking', text, url: window.location.href }).catch(() => {});
     } else {
@@ -252,7 +324,7 @@ function LiveTrackerContent() {
           </div>
           <div className="flex flex-col min-w-0">
             <h1 className="text-[15px] font-extrabold text-on-primary truncate tracking-tight">
-              {getRouteTitle(activeRoute) || (lang === 'hi' ? 'बड़गांव ➔ बलिचा' : 'Badgaon ➔ Balicha')}
+              {directionalTitle || (lang === 'hi' ? 'बड़गांव ➔ बलिचा' : 'Badgaon ➔ Balicha')}
             </h1>
             <div className="flex items-center gap-2 text-inverse-on-surface text-[11px]">
               <span>{activeRoute?.agency || 'PM e-Bus'}</span>
@@ -278,11 +350,31 @@ function LiveTrackerContent() {
         </select>
       </section>
 
-      {/* Quick Bus Selector Tray: Allows easy switching between active buses on this route */}
+      {/* Direction Switch Bar: Allows commuter to swap direction (Kanpur ➔ Chetak vs Chetak ➔ Kanpur) */}
+      <section className="bg-surface-container-low px-4 py-2 border-b border-outline-variant/30 flex items-center justify-between">
+        <div className="flex items-center gap-1.5 min-w-0 text-xs font-bold text-on-surface">
+          <span className="material-symbols-outlined text-primary text-[17px] shrink-0">navigation</span>
+          <span className="text-on-surface-variant font-medium shrink-0">{lang === 'hi' ? 'दिशा:' : 'Towards:'}</span>
+          <span className="truncate text-primary font-extrabold">
+            {routeStops.length > 0 ? getStopDisplayName(routeStops[routeStops.length - 1]) : directionalTitle}
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={handleToggleDirection}
+          className="px-2.5 py-1 rounded-lg bg-surface-container-highest hover:bg-primary hover:text-on-primary text-primary font-bold text-xs flex items-center gap-1.5 transition-all active:scale-95 shadow-2xs shrink-0"
+          title={lang === 'hi' ? 'दिशा बदलें' : 'Switch Direction'}
+        >
+          <span className="material-symbols-outlined text-[15px]">swap_vert</span>
+          <span>{lang === 'hi' ? 'दिशा बदलें' : 'Switch Direction'}</span>
+        </button>
+      </section>
+
+      {/* Quick Bus Selector Tray: Shows ONLY genuinely active buses on this route */}
       {matchingBuses.length > 0 && (
         <section className="bg-surface-container-low px-4 py-2 border-b border-outline-variant/30 flex items-center gap-2 overflow-x-auto no-scrollbar">
           <span className="text-[11px] font-bold text-on-surface-variant uppercase shrink-0">
-            {lang === 'hi' ? 'बस चुनें:' : 'Select Bus:'}
+            {lang === 'hi' ? 'मार्ग की बसें:' : 'Route Buses:'}
           </span>
           {matchingBuses.map(bus => {
             const isSelected = currentBus && currentBus.id === bus.id;
@@ -311,26 +403,49 @@ function LiveTrackerContent() {
         </section>
       )}
 
-      {/* Live Status & Speed Bar (Iconic Where Is My Train Banner) */}
-      <section className="bg-secondary text-on-secondary px-4 py-2.5 flex items-center justify-between shadow-xs">
-        <div className="flex items-center gap-2">
-          <span className="material-symbols-outlined text-[20px] text-secondary-fixed">
-            verified
-          </span>
-          <div className="flex flex-col">
-            <span className="text-[13px] font-bold text-on-secondary leading-tight">
-              {isMoving ? t('onTrack') : t('atStop')}
+      {/* Status Banner when No Live Buses are currently on this route */}
+      {matchingBuses.length === 0 && !isLoading && (
+        <section className="px-4 py-3">
+          <div className="bg-surface-container-low border border-outline-variant/30 rounded-2xl p-3.5 flex items-center gap-3 shadow-2xs">
+            <span className="w-10 h-10 rounded-xl bg-surface-container-high text-primary flex items-center justify-center shrink-0">
+              <span className="material-symbols-outlined text-[22px]">schedule</span>
             </span>
-            <span className="text-[11px] text-secondary-fixed opacity-95">
-              {lastUpdatedSec < 5 ? t('updatedJustNow') : `${lastUpdatedSec} ${t('secondsAgo')}`}
-            </span>
+            <div className="flex flex-col min-w-0">
+              <span className="font-extrabold text-xs text-on-surface">
+                {lang === 'hi' ? 'इस दिशा में अभी कोई लाइव बस सक्रिय नहीं है' : 'No live bus actively tracking in this direction right now'}
+              </span>
+              <span className="text-[11px] text-on-surface-variant mt-0.5">
+                {lang === 'hi'
+                  ? `नियमित बस सेवा (हर ${activeRoute?.headway || '15-20'} मिनट में) • नीचे स्टॉप समय देखें`
+                  : `Regular service operates every ${activeRoute?.headway || '15-20'} mins • Stop timetable below`}
+              </span>
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-1.5 bg-on-secondary-fixed/20 px-3 py-1 rounded-full text-secondary-fixed text-[13px] font-extrabold">
-          <span className="material-symbols-outlined text-[16px]">speed</span>
-          <span>{speedDisplay}</span>
-        </div>
-      </section>
+        </section>
+      )}
+
+      {/* Live Status & Speed Bar (Only when bus is active) */}
+      {currentBus && (
+        <section className="bg-secondary text-on-secondary px-4 py-2.5 flex items-center justify-between shadow-xs">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-[20px] text-secondary-fixed">
+              verified
+            </span>
+            <div className="flex flex-col">
+              <span className="text-[13px] font-bold text-on-secondary leading-tight">
+                {isMoving ? t('onTrack') : t('atStop')}
+              </span>
+              <span className="text-[11px] text-secondary-fixed opacity-95">
+                {lastUpdatedSec < 5 ? t('updatedJustNow') : `${lastUpdatedSec} ${t('secondsAgo')}`}
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 bg-on-secondary-fixed/20 px-3 py-1 rounded-full text-secondary-fixed text-[13px] font-extrabold">
+            <span className="material-symbols-outlined text-[16px]">speed</span>
+            <span>{speedDisplay}</span>
+          </div>
+        </section>
+      )}
 
       {/* Map Toggle & Map Section (Hidden by default as requested) */}
       <div className="px-4 py-2 flex items-center justify-between bg-surface-container-low/60 border-b border-outline-variant/20">
@@ -360,43 +475,45 @@ function LiveTrackerContent() {
             onSelectBus={handleSelectBus}
             routePoints={activeRoute?.points || []}
             stops={routeStops}
-            activeStopIndex={currentStopIndex}
+            activeStopIndex={currentBus ? currentStopIndex : -1}
           />
         </section>
       )}
 
       {/* Current Halt & Next Stop Banner */}
-      <section className="px-4 py-1">
-        <div className="bg-secondary-container text-on-secondary-container p-3 rounded-2xl border border-secondary-fixed-dim/40 flex items-center justify-between shadow-xs">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-10 h-10 rounded-xl bg-secondary text-on-secondary flex items-center justify-center shrink-0">
-              <span className="material-symbols-outlined text-[24px]">directions_bus</span>
+      {currentBus && (
+        <section className="px-4 py-1">
+          <div className="bg-secondary-container text-on-secondary-container p-3 rounded-2xl border border-secondary-fixed-dim/40 flex items-center justify-between shadow-xs">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-10 h-10 rounded-xl bg-secondary text-on-secondary flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-[24px]">directions_bus</span>
+              </div>
+              <div className="flex flex-col min-w-0">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-secondary">
+                  {t('currentStatus')}
+                </span>
+                <span className="text-[15px] font-extrabold text-on-surface truncate">
+                  {getStopDisplayName(currentHaltStop)}
+                </span>
+                <span className="text-[12px] font-semibold text-secondary">
+                  {isMoving ? t('approachingStop') : t('haltAtStop')}
+                </span>
+              </div>
             </div>
-            <div className="flex flex-col min-w-0">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-secondary">
-                {t('currentStatus')}
-              </span>
-              <span className="text-[15px] font-extrabold text-on-surface truncate">
-                {getStopDisplayName(currentHaltStop)}
-              </span>
-              <span className="text-[12px] font-semibold text-secondary">
-                {isMoving ? t('approachingStop') : t('haltAtStop')}
+            <div className="text-right shrink-0">
+              <span className="px-2.5 py-1 rounded-lg bg-secondary text-on-secondary font-extrabold text-xs tracking-wide">
+                {currentBus?.plateFormatted || formatBusPlate(currentBus?.id)}
               </span>
             </div>
           </div>
-          <div className="text-right shrink-0">
-            <span className="px-2.5 py-1 rounded-lg bg-secondary text-on-secondary font-extrabold text-xs tracking-wide">
-              {currentBus?.plateFormatted || formatBusPlate(currentBus?.id)}
-            </span>
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Vertical Stop Line Journey (Iconic Where Is My Train Track) */}
       <section className="px-4 py-4 flex flex-col">
         <div className="text-[12px] font-bold text-on-surface-variant uppercase tracking-wider mb-3 flex items-center justify-between">
           <span>{t('allStops')} ({routeStops.length})</span>
-          <span className="text-primary font-semibold">{currentBus?.agency || 'PM e-Bus'} Udaipur</span>
+          <span className="text-primary font-semibold">{activeRoute?.agency || 'PM e-Bus'} Udaipur</span>
         </div>
 
         {/* Stops Container */}
@@ -404,18 +521,21 @@ function LiveTrackerContent() {
           {/* Base Background Track Line */}
           <div className="absolute left-[23px] top-4 bottom-8 w-[5px] bg-outline-variant/60 rounded-full" />
           
-          {/* Active Progress Track Line */}
-          <div
-            className="absolute left-[23px] top-4 w-[5px] bg-secondary rounded-full transition-all duration-500"
-            style={{
-              height: `${Math.min(100, Math.max(10, (currentStopIndex / Math.max(1, routeStops.length - 1)) * 100))}%`
-            }}
-          />
+          {/* Active Progress Track Line (Only when bus is active) */}
+          {currentBus && (
+            <div
+              className="absolute left-[23px] top-4 w-[5px] bg-secondary rounded-full transition-all duration-500"
+              style={{
+                height: `${Math.min(100, Math.max(10, (currentStopIndex / Math.max(1, routeStops.length - 1)) * 100))}%`
+              }}
+            />
+          )}
 
           {routeStops.map((stop, index) => {
-            const isDeparted = index < currentStopIndex;
-            const isCurrent = index === currentStopIndex;
-            const isNext = index === currentStopIndex + 1;
+            const hasBus = Boolean(currentBus);
+            const isDeparted = hasBus && index < currentStopIndex;
+            const isCurrent = hasBus && index === currentStopIndex;
+            const isNext = hasBus && index === currentStopIndex + 1;
             const isFinal = index === routeStops.length - 1;
             const stopEta = getStopETA(index);
 
@@ -483,7 +603,7 @@ function LiveTrackerContent() {
                     ) : null}
                   </div>
 
-                  {/* Real-time ETA Display (Replaces generic Stop #X) */}
+                  {/* Real-time ETA Display */}
                   <div className="text-right flex-shrink-0 flex flex-col items-end justify-center">
                     {isCurrent ? (
                       <>
@@ -510,7 +630,9 @@ function LiveTrackerContent() {
                           {stopEta.timeStr}
                         </span>
                         <span className={`text-[10.5px] font-extrabold mt-0.5 ${isNext ? 'text-primary' : 'text-secondary'}`}>
-                          {stopEta.etaMinutes <= 1
+                          {!hasBus
+                            ? (lang === 'hi' ? 'अनुमानित' : 'Scheduled')
+                            : stopEta.etaMinutes <= 1
                             ? (lang === 'hi' ? 'पहुँचने वाली' : 'Arriving')
                             : `~${stopEta.etaMinutes} ${lang === 'hi' ? 'मिनट' : 'mins'}`}
                         </span>
