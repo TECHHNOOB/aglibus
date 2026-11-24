@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { passengerRoutes, canonicalStop, stopNames, stopEnglish, planTrips, dutyRouteHints } from '@/lib/network.mjs';
+import { passengerRoutes, canonicalStop, stopNames, stopEnglish, stopLocations, planTrips, dutyRouteHints } from '@/lib/network.mjs';
 import { fleet } from '@/lib/feeds.mjs';
 
 function formatPlate(id) {
@@ -19,6 +19,17 @@ function getDirectionalTitle(title, isReverse) {
   return title;
 }
 
+function getDistanceMeters(lat1, lon1, lat2, lon2) {
+  if (!lat1 || !lon1 || !lat2 || !lon2) return Infinity;
+  const R = 6371000;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const fromParam = searchParams.get('from');
@@ -28,26 +39,79 @@ export async function GET(request) {
     return NextResponse.json({ error: 'Please provide both "from" and "to" parameters' }, { status: 400 });
   }
 
-  // Find stop ID by matching ID or name
+  // Clean text helper for fuzzy matching
+  function cleanText(str) {
+    return (str || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9\u0900-\u097F]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  // Find stop ID with smart token & fuzzy matching
   function resolveStopId(input) {
-    if (/^\d+$/.test(input)) return canonicalStop(Number(input));
-    const term = input.trim().toLowerCase();
+    if (!input) return null;
+    if (/^\d+$/.test(input.trim())) return canonicalStop(Number(input.trim()));
     
-    // Exact or partial match in stopEnglish
+    const cleanInput = cleanText(input);
+    const inputWords = cleanInput.split(' ').filter(w => w.length > 1).map(w => w.replace(/partap/g, 'pratap'));
+    
+    // 1. Exact match in stopEnglish or stopNames
     for (const [idStr, eng] of Object.entries(stopEnglish)) {
-      if (eng && eng.toLowerCase() === term) return canonicalStop(Number(idStr));
-    }
-    // Exact or partial match in stopNames
-    for (let i = 0; i < stopNames.length; i++) {
-      if (stopNames[i] && stopNames[i].toLowerCase() === term) return canonicalStop(i);
-    }
-    for (const [idStr, eng] of Object.entries(stopEnglish)) {
-      if (eng && eng.toLowerCase().includes(term)) return canonicalStop(Number(idStr));
+      if (cleanText(eng) === cleanInput) return canonicalStop(Number(idStr));
     }
     for (let i = 0; i < stopNames.length; i++) {
-      if (stopNames[i] && stopNames[i].toLowerCase().includes(term)) return canonicalStop(i);
+      if (cleanText(stopNames[i]) === cleanInput) return canonicalStop(i);
     }
-    return null;
+    
+    // 2. Substring match
+    for (const [idStr, eng] of Object.entries(stopEnglish)) {
+      if (cleanText(eng).includes(cleanInput)) return canonicalStop(Number(idStr));
+    }
+    for (let i = 0; i < stopNames.length; i++) {
+      if (cleanText(stopNames[i]).includes(cleanInput)) return canonicalStop(i);
+    }
+
+    // 3. Normalized without spaces (handles "ranapratap" matching "rana pratap")
+    const noSpaceInput = cleanInput.replace(/\s+/g, '').replace(/partap/g, 'pratap');
+    for (const [idStr, eng] of Object.entries(stopEnglish)) {
+      const noSpaceEng = cleanText(eng).replace(/\s+/g, '');
+      if (noSpaceEng.includes(noSpaceInput)) return canonicalStop(Number(idStr));
+    }
+    for (let i = 0; i < stopNames.length; i++) {
+      const noSpaceName = cleanText(stopNames[i]).replace(/\s+/g, '');
+      if (noSpaceName.includes(noSpaceInput)) return canonicalStop(i);
+    }
+
+    // 4. Token overlap scoring with specificity bonus (e.g. "rana" / "pratap" prioritize Rana Pratap Nagar over generic Railway Station)
+    let bestId = null;
+    let maxScore = -1;
+    const allEntries = [
+      ...Object.entries(stopEnglish).map(([id, text]) => ({ id: Number(id), text })),
+      ...stopNames.map((text, id) => ({ id, text }))
+    ];
+
+    for (const { id, text } of allEntries) {
+      if (!text) continue;
+      const targetWords = cleanText(text).split(' ');
+      let score = 0;
+      let matchedWords = 0;
+      for (const w of inputWords) {
+        if (targetWords.some(tw => tw === w)) {
+          score += (w === 'rana' || w === 'pratap') ? 5 : 2;
+          matchedWords++;
+        } else if (targetWords.some(tw => tw.includes(w) || w.includes(tw))) {
+          score += 1;
+          matchedWords++;
+        }
+      }
+      if (matchedWords >= Math.min(2, inputWords.length) && score > maxScore) {
+        maxScore = score;
+        bestId = id;
+      }
+    }
+
+    return bestId !== null ? canonicalStop(bestId) : null;
   }
 
   const fromId = resolveStopId(fromParam);
@@ -68,102 +132,229 @@ export async function GET(request) {
 
   const activeBuses = fleetData.buses || [];
   
-  // Sort plans so direct routes (1 leg) are prioritized, then by duration
-  const sortedPlans = [...rawPlans].sort((a, b) => {
-    if (a.legs.length !== b.legs.length) {
-      return a.legs.length - b.legs.length;
+  // Smart Curation:
+  // 1. Prioritize Direct Routes (unique by routeId)
+  // 2. Add Best 1-Transfer Routes (unique by route pair, only if needed)
+  const directPlans = rawPlans.filter(p => p.legs.length === 1);
+  const connectingPlans = rawPlans.filter(p => p.legs.length === 2);
+
+  const seenDirectRoutes = new Set();
+  const uniqueDirect = [];
+  for (const p of directPlans.sort((a, b) => a.minutes - b.minutes)) {
+    const rId = String(p.legs[0].route.id);
+    if (seenDirectRoutes.has(rId)) continue;
+    seenDirectRoutes.add(rId);
+    uniqueDirect.push(p);
+    if (uniqueDirect.length >= 4) break;
+  }
+
+  const seenTransferPairs = new Set();
+  const uniqueConnecting = [];
+  if (uniqueDirect.length < 3) {
+    for (const p of connectingPlans.sort((a, b) => a.minutes - b.minutes)) {
+      const r1 = String(p.legs[0].route.id);
+      const r2 = String(p.legs[1].route.id);
+      if (seenDirectRoutes.has(r1)) continue; // Don't transfer if starting route already had direct option
+      const pairKey = `${r1}-${r2}`;
+      if (seenTransferPairs.has(pairKey)) continue;
+      seenTransferPairs.add(pairKey);
+      uniqueConnecting.push(p);
+      if (uniqueDirect.length + uniqueConnecting.length >= 4) break;
     }
-    return a.minutes - b.minutes;
-  });
+  }
 
-  // Deduplicate and enrich
-  const seenRouteSignatures = new Set();
-  const enriched = [];
+  // Combine direct and connecting plans (max 4 distinct curated options)
+  const curatedPlans = [...uniqueDirect, ...uniqueConnecting];
+  const cleanRouteId = (rId) => String(rId || '').replace(/^PM/i, '');
 
-  for (const p of sortedPlans) {
-    const signature = p.legs.map(l => `${l.route.id}:${l.from}->${l.to}`).join('|');
-    if (seenRouteSignatures.has(signature)) continue;
-    seenRouteSignatures.add(signature);
+  const now = new Date();
 
-    const cleanRouteId = (rId) => String(rId || '').replace(/^PM/i, '');
+  const enriched = curatedPlans.map((p, planIdx) => {
+    const totalMinutes = p.minutes;
+    const transferCount = p.legs.length - 1;
 
-    enriched.push({
-      totalMinutes: p.minutes,
-      minutes: p.minutes,
-      transferCount: p.legs.length - 1,
-      legs: p.legs.map(leg => {
-        const fromIdx = leg.route.stops.indexOf(leg.from);
-        const toIdx = leg.route.stops.indexOf(leg.to);
-        const isReverse = fromIdx > toIdx;
+    const legs = p.legs.map((leg, legIdx) => {
+      const fromIdx = leg.route.stops.indexOf(leg.from);
+      const toIdx = leg.route.stops.indexOf(leg.to);
+      const isReverse = fromIdx > toIdx;
 
-        // Route direction title: e.g. Kanpur ➔ Chetak Bus Stand when traveling reverse!
-        const dirTitle = getDirectionalTitle(leg.route.title, isReverse);
-        const dirTitleEn = getDirectionalTitle(leg.route.titleEn || leg.route.title, isReverse);
+      // Directional title
+      const dirTitle = getDirectionalTitle(leg.route.title, isReverse);
+      const dirTitleEn = getDirectionalTitle(leg.route.titleEn || leg.route.title, isReverse);
 
-        const rId = String(leg.route.id);
-        const rCode = String(leg.route.code || '');
-        const rNum = cleanRouteId(rCode) || cleanRouteId(rId);
+      const rId = String(leg.route.id);
+      const rCode = String(leg.route.code || '');
+      const rNum = cleanRouteId(rCode) || cleanRouteId(rId);
 
-        // Find active live buses on this route
-        const routeBuses = activeBuses.filter(b => {
-          const bHint = dutyRouteHints[b.id] ? String(dutyRouteHints[b.id]) : '';
-          if (b.routeId === rId || b.routeId === rCode) return true;
-          if (bHint && (bHint === rId || bHint === rNum)) return true;
-          if (b.assignment && (b.assignment === rId || b.assignment.includes(rId) || b.assignment.includes(rCode))) return true;
-          if (b.route && (b.route.includes(rId) || b.route.includes(rCode))) return true;
-          return false;
-        }).map(b => ({
+      // Find all live buses mapped to this route
+      const matchedBuses = activeBuses.filter(b => {
+        const bHint = dutyRouteHints[b.id] ? String(dutyRouteHints[b.id]) : '';
+        if (b.routeId === rId || b.routeId === rCode) return true;
+        if (bHint && (bHint === rId || bHint === rNum)) return true;
+        if (b.assignment && (b.assignment === rId || b.assignment.includes(rId) || b.assignment.includes(rCode))) return true;
+        if (b.route && (b.route.includes(rId) || b.route.includes(rCode))) return true;
+        return false;
+      });
+
+      // Classify each bus into upcoming or departed relative to boarding stop (leg.from)
+      const upcomingBuses = [];
+      const departedBuses = [];
+
+      for (const b of matchedBuses) {
+        let closestStopId = null;
+        let closestIdx = -1;
+        let minDist = Infinity;
+
+        // Find nearest stop along route
+        leg.route.stops.forEach((sId, idx) => {
+          const loc = stopLocations[sId];
+          if (loc) {
+            const d = getDistanceMeters(b.lat, b.lng, loc[0], loc[1]);
+            if (d < minDist) {
+              minDist = d;
+              closestStopId = sId;
+              closestIdx = idx;
+            }
+          }
+        });
+
+        // If bus is more than 3.5km away from any stop on this route, it might be off-duty
+        if (minDist > 3500) continue;
+
+        let isUpcoming = false;
+        let isAtStop = false;
+        let stopsAway = 0;
+
+        if (!isReverse) {
+          // Forward direction: 0 -> fromIdx -> toIdx -> end
+          if (closestIdx < fromIdx) {
+            isUpcoming = true;
+            stopsAway = fromIdx - closestIdx;
+          } else if (closestIdx === fromIdx && minDist <= 400) {
+            isAtStop = true;
+            stopsAway = 0;
+          } else {
+            // Bus is past fromIdx!
+            stopsAway = closestIdx - fromIdx;
+          }
+        } else {
+          // Reverse direction: end -> fromIdx -> toIdx -> 0
+          if (closestIdx > fromIdx) {
+            isUpcoming = true;
+            stopsAway = closestIdx - fromIdx;
+          } else if (closestIdx === fromIdx && minDist <= 400) {
+            isAtStop = true;
+            stopsAway = 0;
+          } else {
+            // Bus is past fromIdx!
+            stopsAway = fromIdx - closestIdx;
+          }
+        }
+
+        const etaMinutes = isAtStop ? 1 : Math.max(2, Math.round(stopsAway * 2.5));
+        const nearStopName = stopNames[closestStopId] || '';
+        const nearStopEng = stopEnglish[closestStopId] || nearStopName;
+
+        const busData = {
           id: b.id,
           plate: formatPlate(b.id),
           speed: Math.round(b.speed || 0),
           lat: b.lat,
-          lng: b.lng
-        }));
-
-        const toStopName = stopNames[leg.to] || `Stop #${leg.to}`;
-        const toStopEng = stopEnglish[leg.to] || toStopName;
-
-        return {
-          id: leg.route.id,
-          routeId: leg.route.id,
-          code: leg.route.code,
-          routeCode: leg.route.code,
-          title: dirTitle,
-          routeTitle: dirTitle,
-          titleEn: dirTitleEn,
-          routeTitleEn: dirTitleEn,
-          originalTitle: leg.route.title,
-          originalTitleEn: leg.route.titleEn || leg.route.title,
-          isReverse,
-          directionLabel: `${toStopName} की ओर`,
-          directionLabelEn: `Towards ${toStopEng}`,
-          agency: leg.route.agency,
-          minutes: leg.minutes,
-          from: stopNames[leg.from] || `Stop #${leg.from}`,
-          to: toStopName,
-          fromStop: {
-            id: leg.from,
-            name: stopNames[leg.from] || `Stop #${leg.from}`,
-            english: stopEnglish[leg.from] || stopNames[leg.from] || `Stop #${leg.from}`
-          },
-          toStop: {
-            id: leg.to,
-            name: toStopName,
-            english: toStopEng
-          },
-          stopsCount: leg.stops.length,
-          liveBuses: routeBuses,
-          stopSequence: leg.stops.map(s => ({
-            id: s,
-            name: stopNames[s] || `Stop #${s}`,
-            english: stopEnglish[s] || stopNames[s] || `Stop #${s}`
-          }))
+          lng: b.lng,
+          isUpcoming: isUpcoming || isAtStop,
+          isAtStop,
+          stopsAway,
+          etaMinutes,
+          nearStop: { id: closestStopId, name: nearStopName, english: nearStopEng },
+          distMeters: Math.round(minDist)
         };
-      })
+
+        if (isUpcoming || isAtStop) {
+          upcomingBuses.push(busData);
+        } else {
+          departedBuses.push(busData);
+        }
+      }
+
+      // Sort upcoming buses by ETA (soonest first)
+      upcomingBuses.sort((a, b) => a.etaMinutes - b.etaMinutes);
+      // Sort departed buses by how recently they left
+      departedBuses.sort((a, b) => a.stopsAway - b.stopsAway);
+
+      const nextUpcomingBus = upcomingBuses[0] || null;
+      const toStopName = stopNames[leg.to] || `Stop #${leg.to}`;
+      const toStopEng = stopEnglish[leg.to] || toStopName;
+
+      return {
+        id: leg.route.id,
+        routeId: leg.route.id,
+        code: leg.route.code,
+        routeCode: leg.route.code,
+        title: dirTitle,
+        routeTitle: dirTitle,
+        titleEn: dirTitleEn,
+        routeTitleEn: dirTitleEn,
+        originalTitle: leg.route.title,
+        originalTitleEn: leg.route.titleEn || leg.route.title,
+        isReverse,
+        directionLabel: `${toStopName} की ओर`,
+        directionLabelEn: `Towards ${toStopEng}`,
+        agency: leg.route.agency,
+        minutes: leg.minutes,
+        from: stopNames[leg.from] || `Stop #${leg.from}`,
+        to: toStopName,
+        fromStop: {
+          id: leg.from,
+          name: stopNames[leg.from] || `Stop #${leg.from}`,
+          english: stopEnglish[leg.from] || stopNames[leg.from] || `Stop #${leg.from}`
+        },
+        toStop: {
+          id: leg.to,
+          name: toStopName,
+          english: toStopEng
+        },
+        stopsCount: leg.stops.length,
+        upcomingBuses,
+        departedBuses,
+        nextUpcomingBus,
+        hasUpcomingBus: upcomingBuses.length > 0,
+        stopSequence: leg.stops.map(s => ({
+          id: s,
+          name: stopNames[s] || `Stop #${s}`,
+          english: stopEnglish[s] || stopNames[s] || `Stop #${s}`
+        }))
+      };
     });
 
-    if (enriched.length >= 8) break; // Keep top 8 best options
-  }
+    // Plan-level departure & arrival time calculation
+    const primaryLeg = legs[0];
+    const departureMinutes = primaryLeg?.nextUpcomingBus
+      ? primaryLeg.nextUpcomingBus.etaMinutes
+      : (8 + planIdx * 10);
+
+    const depDate = new Date(now.getTime() + departureMinutes * 60000);
+    const arrDate = new Date(depDate.getTime() + totalMinutes * 60000);
+
+    const formatClock = (d) => {
+      let h = d.getHours();
+      const m = d.getMinutes().toString().padStart(2, '0');
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      h = h % 12 || 12;
+      return { time: `${h}:${m}`, ampm, full: `${h}:${m} ${ampm}` };
+    };
+
+    return {
+      totalMinutes,
+      minutes: totalMinutes,
+      transferCount,
+      departureMinutes,
+      departureTime: formatClock(depDate),
+      arrivalTime: formatClock(arrDate),
+      hasLiveUpcomingBus: primaryLeg?.hasUpcomingBus || false,
+      nextUpcomingBus: primaryLeg?.nextUpcomingBus || null,
+      legs
+    };
+  });
 
   return NextResponse.json({
     from: { id: fromId, name: stopNames[fromId], english: stopEnglish[fromId] },

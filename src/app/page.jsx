@@ -401,8 +401,8 @@ export default function HomePage() {
             {tripPlan.plans.map((opt, i) => {
               const totalMin = opt.totalMinutes || opt.minutes || 15;
               const isDirect = (opt.transferCount != null ? opt.transferCount : opt.legs.length - 1) === 0;
-              const routePillLabel = opt.legs.map(l => l.routeCode || l.code || l.routeId || l.id).join(' ➔ ');
-              const primaryRouteId = opt.legs[0]?.routeId || opt.legs[0]?.id || '4';
+              const routePillLabel = opt.legs.map(l => l.routeCode || l.code || l.routeId || l.id || (l.route && (l.route.code || l.route.id))).filter(Boolean).join(' ➔ ') || 'Bus';
+              const primaryRouteId = opt.legs[0]?.routeId || opt.legs[0]?.id || opt.legs[0]?.route?.id || '4';
 
               return (
                 <div
@@ -427,15 +427,16 @@ export default function HomePage() {
                   {/* Route legs detail */}
                   <div className="flex flex-col gap-3 pl-2.5 border-l-2 border-primary/30">
                     {opt.legs.map((leg, legIdx) => {
-                      const legCode = leg.routeCode || leg.code || leg.routeId || '';
-                      const legTitle = lang === 'en'
-                        ? (leg.routeTitleEn || leg.titleEn || leg.routeTitle || leg.title)
-                        : (leg.routeTitle || leg.title || leg.routeTitleEn);
-                      const fromName = getStopDisplayName(leg.fromStop || leg.from);
-                      const toName = getStopDisplayName(leg.toStop || leg.to);
-                      const stopsNum = leg.stopsCount || (leg.stopSequence ? leg.stopSequence.length : 0);
+                      const legCode = leg.routeCode || leg.code || leg.routeId || leg.id || (leg.route && (leg.route.code || leg.route.id)) || `Route ${primaryRouteId}`;
+                      const rawTitle = lang === 'en'
+                        ? (leg.routeTitleEn || leg.titleEn || leg.routeTitle || leg.title || (leg.route && (leg.route.titleEn || leg.route.title)))
+                        : (leg.routeTitle || leg.title || leg.routeTitleEn || (leg.route && (leg.route.title || leg.route.titleEn)));
+                      const legTitle = rawTitle && rawTitle !== '()' ? rawTitle : `${legCode} City Bus`;
+                      const fromName = getStopDisplayName(leg.fromStop || leg.from) || (typeof leg.from === 'string' ? leg.from : (lang === 'hi' ? 'आरंभिक स्टॉप' : 'Start Stop'));
+                      const toName = getStopDisplayName(leg.toStop || leg.to) || (typeof leg.to === 'string' ? leg.to : (lang === 'hi' ? 'गंतव्य' : 'Destination'));
+                      const stopsNum = leg.stopsCount || (leg.stopSequence ? leg.stopSequence.length : (leg.stops ? leg.stops.length : 1));
                       const dirLabel = lang === 'en' ? (leg.directionLabelEn || `Towards ${toName}`) : (leg.directionLabel || `${toName} की ओर`);
-                      const routeLiveBuses = leg.liveBuses || [];
+                      const routeUpcomingBuses = leg.upcomingBuses || (leg.liveBuses ? leg.liveBuses.filter(b => b.isUpcoming) : []);
 
                       return (
                         <div key={legIdx} className="text-xs flex flex-col gap-1.5">
@@ -462,21 +463,25 @@ export default function HomePage() {
                             <span className="text-secondary font-medium">({stopsNum} {lang === 'hi' ? 'स्टॉप्स' : 'stops'})</span>
                           </div>
 
-                          {/* Live buses badge list or frequency */}
+                          {/* Live buses badge list: ONLY SHOWS UPCOMING BUSES */}
                           <div className="mt-1 bg-surface-container/50 p-2.5 rounded-xl border border-outline-variant/20 flex flex-col gap-1.5">
                             <div className="flex items-center justify-between text-[11px] font-bold">
                               <span className="flex items-center gap-1.5 text-primary">
-                                <span className="w-2 h-2 rounded-full bg-secondary animate-pulse" />
-                                {lang === 'hi' ? 'इस दिशा में लाइव बसें:' : 'Live Buses in this Direction:'}
+                                <span className={`w-2 h-2 rounded-full ${routeUpcomingBuses.length > 0 ? 'bg-secondary animate-pulse' : 'bg-outline'}`} />
+                                {routeUpcomingBuses.length > 0
+                                  ? (lang === 'hi' ? 'मार्ग पर आने वाली बसें:' : 'Upcoming Buses to Board:')
+                                  : (lang === 'hi' ? 'बस सेवा स्थिति:' : 'Bus Service Status:')}
                               </span>
                               <span className="text-[10px] text-on-surface-variant font-semibold">
-                                {routeLiveBuses.length > 0 ? `${routeLiveBuses.length} ${lang === 'hi' ? 'सक्रिय' : 'Active'}` : (lang === 'hi' ? 'फ्रीक्वेंसी: हर 15-20 मिनट' : 'Every 15-20m')}
+                                {routeUpcomingBuses.length > 0
+                                  ? `${routeUpcomingBuses.length} ${lang === 'hi' ? 'निकट' : 'approaching'}`
+                                  : (lang === 'hi' ? 'हर 15-20 मिनट' : 'Every 15-20m')}
                               </span>
                             </div>
 
-                            {routeLiveBuses.length > 0 ? (
+                            {routeUpcomingBuses.length > 0 ? (
                               <div className="flex flex-wrap gap-1.5 pt-0.5">
-                                {routeLiveBuses.map((bus) => (
+                                {routeUpcomingBuses.map((bus) => (
                                   <Link
                                     key={bus.id}
                                     href={`/track?route=${leg.routeId}&bus=${bus.id}`}
@@ -487,8 +492,8 @@ export default function HomePage() {
                                       directions_bus
                                     </span>
                                     <span className="font-bold">{bus.plate}</span>
-                                    <span className="px-1 py-0.2 rounded bg-surface-container-high group-hover:bg-primary-container group-hover:text-on-primary-container text-[10px] font-semibold text-secondary">
-                                      {bus.speed > 0 ? `${bus.speed} km/h` : (lang === 'hi' ? 'खड़ी है' : 'Halt')}
+                                    <span className="px-1.5 py-0.2 rounded bg-secondary-fixed text-on-secondary-fixed text-[10px] font-bold">
+                                      {bus.isAtStop ? (lang === 'hi' ? 'स्टॉप पर' : 'At stop') : `~${bus.etaMinutes}m`}
                                     </span>
                                   </Link>
                                 ))}

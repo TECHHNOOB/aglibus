@@ -151,11 +151,19 @@ function SearchResultsContent() {
     router.push(`/search?from=${encodeURIComponent(origin)}&to=${encodeURIComponent(destination)}`);
   };
 
-  // Dynamic departure time calculator based on local time
-  const getDepartureInfo = (idx, totalMin) => {
+  // Read realistic departure and arrival times from API plan data
+  const getDepartureInfo = (opt, idx) => {
+    if (opt.departureTime && opt.arrivalTime) {
+      return {
+        dep: opt.departureTime,
+        arr: opt.arrivalTime,
+        depMinutesFromNow: opt.departureMinutes || 10
+      };
+    }
     const now = new Date();
-    const depTime = new Date(now.getTime() + (3 + idx * 14) * 60000);
-    const arrTime = new Date(depTime.getTime() + totalMin * 60000);
+    const depMinutesFromNow = opt.departureMinutes || (8 + idx * 10);
+    const depDate = new Date(now.getTime() + depMinutesFromNow * 60000);
+    const arrDate = new Date(depDate.getTime() + (opt.totalMinutes || 20) * 60000);
 
     const formatT = (d) => {
       let h = d.getHours();
@@ -166,9 +174,9 @@ function SearchResultsContent() {
     };
 
     return {
-      dep: formatT(depTime),
-      arr: formatT(arrTime),
-      depMinutesFromNow: 3 + idx * 14
+      dep: formatT(depDate),
+      arr: formatT(arrDate),
+      depMinutesFromNow
     };
   };
 
@@ -190,7 +198,7 @@ function SearchResultsContent() {
         return p.legs.some(l => /pm|electric|e-bus/i.test(l.agency || l.code || ''));
       }
       if (activeFilter === 'next30') {
-        const depInfo = getDepartureInfo(idx, p.totalMinutes || 15);
+        const depInfo = getDepartureInfo(p, idx);
         return depInfo.depMinutesFromNow <= 30;
       }
       return true;
@@ -492,14 +500,15 @@ function SearchResultsContent() {
             const isAlarmSet = alarms.has(i);
             const isStopsExpanded = expandedStops.has(i);
 
-            // Dep & Arr Times
-            const times = getDepartureInfo(i, totalMin);
+            // Dep & Arr Times from API plan
+            const times = getDepartureInfo(opt, i);
             const stopsCount = opt.legs.reduce((acc, l) => acc + (l.stopsCount || 4), 0);
             const distanceEst = (stopsCount * 0.75).toFixed(1);
 
-            // Live bus on primary leg
-            const liveBuses = primaryLeg?.liveBuses || [];
-            const liveMovingBus = liveBuses.find(b => b.speed > 0) || liveBuses[0] || null;
+            // UPCOMING LIVE BUS ONLY (Buses that have NOT passed the boarding stop!)
+            const nextUpcomingBus = primaryLeg?.nextUpcomingBus || null;
+            const hasUpcomingBus = Boolean(nextUpcomingBus);
+            const recentlyDepartedBus = primaryLeg?.departedBuses?.[0] || null;
 
             return (
               <article
@@ -606,29 +615,46 @@ function SearchResultsContent() {
                   </div>
                 </div>
 
-                {/* Live Telemetry Status Banner */}
-                <div className="bg-secondary-container/20 rounded-xl p-2.5 flex items-center justify-between border border-secondary-container/30">
+                {/* Live Telemetry Status Banner (Only shows genuinely UPCOMING buses) */}
+                <div className={`rounded-xl p-2.5 flex items-center justify-between border ${
+                  hasUpcomingBus
+                    ? 'bg-secondary-container/25 border-secondary-container/40'
+                    : 'bg-surface-container-low border-outline-variant/30'
+                }`}>
                   <div className="flex items-center gap-2 min-w-0">
-                    <div className="w-2.5 h-2.5 rounded-full bg-secondary animate-pulse flex-shrink-0" />
+                    <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
+                      hasUpcomingBus ? 'bg-secondary animate-pulse' : 'bg-outline'
+                    }`} />
                     <div className="truncate">
-                      {liveMovingBus ? (
+                      {hasUpcomingBus ? (
                         <>
-                          <p className="text-xs font-bold text-on-secondary-container truncate">
-                            {lang === 'hi'
-                              ? `लाइव बस: ${liveMovingBus.plate} (${liveMovingBus.speed > 0 ? `${liveMovingBus.speed} किमी/घंटा` : 'स्टॉप पर'})`
-                              : `Live Bus: ${liveMovingBus.plate} (${liveMovingBus.speed > 0 ? `${liveMovingBus.speed} km/h` : 'At stop'})`}
+                          <p className="text-xs font-bold text-on-secondary-container truncate flex items-center gap-1.5">
+                            <span className="text-secondary font-black">
+                              {lang === 'hi' ? 'आने वाली बस:' : 'Upcoming Bus:'}
+                            </span>
+                            <span>{nextUpcomingBus.plate}</span>
+                            <span className="px-1.5 py-0.2 rounded bg-secondary-fixed text-on-secondary-fixed text-[10px] font-bold">
+                              {nextUpcomingBus.speed > 0 ? `${nextUpcomingBus.speed} km/h` : (lang === 'hi' ? 'स्टॉप' : 'Halt')}
+                            </span>
                           </p>
-                          <p className="text-[10.5px] text-secondary font-medium truncate">
-                            {primaryLeg.directionLabel || `चेतक की ओर`} • GPS Synced
+                          <p className="text-[10.5px] text-secondary font-bold truncate mt-0.5">
+                            📍 {nextUpcomingBus.isAtStop
+                              ? (lang === 'hi' ? 'अभी आपके स्टॉप पर है (At Stop Now)' : 'At your stop now')
+                              : `${nextUpcomingBus.stopsAway} ${lang === 'hi' ? 'स्टॉप दूर' : 'stops away'} (${nextUpcomingBus.nearStop.name || nextUpcomingBus.nearStop.english}) • ~${nextUpcomingBus.etaMinutes} ${t('minutes')}`}
                           </p>
                         </>
                       ) : (
                         <>
-                          <p className="text-xs font-bold text-on-secondary-container truncate">
-                            {lang === 'hi' ? 'नियमित सेवा (हर 15-20 मिनट)' : 'Regular Service (Every 15-20 mins)'}
+                          <p className="text-xs font-bold text-on-surface truncate">
+                            {lang === 'hi' ? 'अगली निर्धारित बस (Next Scheduled Bus)' : 'Next Scheduled Bus'}
                           </p>
-                          <p className="text-[10.5px] text-secondary font-medium truncate">
-                            {primaryLeg.directionLabel || `${destination} की ओर`}
+                          <p className="text-[10.5px] text-on-surface-variant font-medium truncate mt-0.5">
+                            {lang === 'hi' ? 'नियमित बस सेवा (हर 15-20 मिनट में) • समय पर' : 'Regular Service (Every 15-20 mins) • On Time'}
+                            {recentlyDepartedBus && (
+                              <span className="text-outline ml-1.5 font-normal">
+                                ({lang === 'hi' ? `पिछली बस निकल चुकी है` : `Past bus departed`})
+                              </span>
+                            )}
                           </p>
                         </>
                       )}
@@ -643,11 +669,15 @@ function SearchResultsContent() {
                 {/* Action Buttons: Big Live Track CTA + Stops Accordion Toggle */}
                 <div className="flex items-center gap-2 pt-0.5">
                   <Link
-                    href={`/track?route=${primaryRouteId}${liveMovingBus ? `&bus=${liveMovingBus.id}` : ''}`}
+                    href={`/track?route=${primaryRouteId}${nextUpcomingBus ? `&bus=${nextUpcomingBus.id}` : ''}`}
                     className="flex-1 h-11 bg-secondary hover:bg-secondary/90 active:scale-[0.98] text-on-secondary rounded-xl flex items-center justify-center gap-2 font-bold text-xs shadow-xs transition-all"
                   >
                     <span className="material-symbols-outlined text-[19px]">near_me</span>
-                    <span>{lang === 'hi' ? 'लाइव देखें / Live Track' : 'Live Track Bus'}</span>
+                    <span>
+                      {hasUpcomingBus
+                        ? (lang === 'hi' ? `लाइव ट्रैक करें (${nextUpcomingBus.plate})` : `Track Live (${nextUpcomingBus.plate})`)
+                        : (lang === 'hi' ? 'लाइव देखें / Live Track' : 'Live Track Route')}
+                    </span>
                   </Link>
 
                   <button
