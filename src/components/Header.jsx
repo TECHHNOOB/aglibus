@@ -10,23 +10,16 @@ export default function Header() {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-surface/95 backdrop-blur-md border-b border-surface-container-high/60 transition-colors">
       <div className="max-w-2xl mx-auto h-16 px-4 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2.5 min-w-0 group">
-          <div className="w-10 h-10 rounded-xl bg-primary text-on-primary flex items-center justify-center font-bold text-lg shadow-sm group-hover:scale-105 transition-transform">
-            <span className="material-symbols-outlined text-[24px]">directions_bus</span>
-          </div>
-          <div className="flex flex-col min-w-0">
-            <div className="flex items-center gap-1.5">
-              <span className="font-extrabold text-[17px] text-on-surface tracking-tight leading-tight">
-                AgliBus
-              </span>
-              <span className="px-1.5 py-0.2 rounded-full bg-secondary-fixed text-on-secondary-fixed text-[10px] font-bold uppercase tracking-wider">
-                Live
-              </span>
-            </div>
-            <span className="text-[12px] font-medium text-on-surface-variant truncate">
-              {t('citySubtitle')}
-            </span>
-          </div>
+        {/* Official Brand Logo */}
+        <Link href="/" className="flex items-center gap-2 min-w-0 group py-1">
+          <img
+            src="/logo.png"
+            alt="AgliBus Official Logo"
+            className="h-9 sm:h-10 w-auto object-contain max-w-[175px] sm:max-w-[210px] transition-transform group-hover:scale-105"
+          />
+          <span className="px-1.5 py-0.2 rounded-full bg-secondary-fixed text-on-secondary-fixed text-[10px] font-extrabold uppercase tracking-wider shrink-0">
+            Live
+          </span>
         </Link>
 
         <div className="flex items-center gap-2">

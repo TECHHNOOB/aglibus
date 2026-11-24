@@ -6,6 +6,10 @@ import { LanguageProvider } from '@/components/LanguageContext';
 export const metadata = {
   title: 'AgliBus • Udaipur City Bus Tracker',
   description: 'Live GPS bus tracking, route planning, timetable, and nearby radar for Udaipur City Transit & PM e-Bus.',
+  icons: {
+    icon: '/logo.png',
+    apple: '/logo.png',
+  },
 };
 
 export const viewport = {

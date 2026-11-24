@@ -11,13 +11,16 @@ export default function AboutPage() {
     <div className="flex flex-col w-full pb-10">
       {/* Friendly Header Section */}
       <section className="px-4 pt-4 pb-3 flex flex-col items-center text-center gap-2">
-        <div className="w-16 h-16 rounded-3xl bg-primary text-on-primary flex items-center justify-center shadow-lg mb-1">
-          <span className="material-symbols-outlined text-[36px]">directions_bus</span>
+        <div className="w-56 max-w-xs flex items-center justify-center p-2 mb-1">
+          <img
+            src="/logo.png"
+            alt="AgliBus Official Logo"
+            className="w-full h-auto object-contain drop-shadow-xs"
+          />
         </div>
 
         <div className="flex items-center justify-center gap-2">
-          <h1 className="text-2xl font-extrabold text-on-surface">AgliBus • अगलीबस</h1>
-          <span className="px-2 py-0.5 rounded-full bg-primary-fixed text-on-primary-fixed text-xs font-bold">
+          <span className="px-2.5 py-0.5 rounded-full bg-primary-fixed text-on-primary-fixed text-xs font-bold">
             v2.4
           </span>
         </div>
