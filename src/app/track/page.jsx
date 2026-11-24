@@ -31,6 +31,7 @@ function LiveTrackerContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [lastUpdatedSec, setLastUpdatedSec] = useState(0);
   const [alarmActive, setAlarmActive] = useState(false);
+  const [showMap, setShowMap] = useState(false); // Map hidden by default as requested
 
   // Fetch static data (routes and stops)
   useEffect(() => {
@@ -331,17 +332,38 @@ function LiveTrackerContent() {
         </div>
       </section>
 
-      {/* Map Section */}
-      <section className="p-3">
-        <BusMap
-          buses={matchingBuses}
-          selectedBus={currentBus}
-          onSelectBus={handleSelectBus}
-          routePoints={activeRoute?.points || []}
-          stops={routeStops}
-          activeStopIndex={currentStopIndex}
-        />
-      </section>
+      {/* Map Toggle & Map Section (Hidden by default as requested) */}
+      <div className="px-4 py-2 flex items-center justify-between bg-surface-container-low/60 border-b border-outline-variant/20">
+        <div className="flex items-center gap-1.5 text-xs font-semibold text-on-surface-variant">
+          <span className="material-symbols-outlined text-[16px] text-primary">
+            {showMap ? 'map' : 'explore'}
+          </span>
+          <span>{showMap ? (lang === 'hi' ? 'लाइव मैप सक्रिय' : 'Live Map Visible') : (lang === 'hi' ? 'लाइव मैप छिपा हुआ है' : 'Live Map is Hidden')}</span>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowMap(!showMap)}
+          className="px-3 py-1 rounded-full bg-surface-container hover:bg-surface-container-high border border-outline-variant/40 text-primary font-bold text-xs flex items-center gap-1 active:scale-95 transition-all shadow-2xs"
+        >
+          <span className="material-symbols-outlined text-[15px]">
+            {showMap ? 'visibility_off' : 'visibility'}
+          </span>
+          <span>{showMap ? (lang === 'hi' ? 'मैप छुपाएं' : 'Hide Map') : (lang === 'hi' ? 'मैप देखें' : 'Show Map')}</span>
+        </button>
+      </div>
+
+      {showMap && (
+        <section className="p-3 animate-fadeIn">
+          <BusMap
+            buses={matchingBuses}
+            selectedBus={currentBus}
+            onSelectBus={handleSelectBus}
+            routePoints={activeRoute?.points || []}
+            stops={routeStops}
+            activeStopIndex={currentStopIndex}
+          />
+        </section>
+      )}
 
       {/* Current Halt & Next Stop Banner */}
       <section className="px-4 py-1">
