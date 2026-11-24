@@ -9,8 +9,8 @@ export default function HomePage() {
   const router = useRouter();
   const { lang, t, getStopDisplayName, getRouteTitle, formatBusPlate } = useLanguage();
 
-  const [origin, setOrigin] = useState(lang === 'hi' ? 'चेटक सर्कल' : 'Chetak Circle');
-  const [destination, setDestination] = useState(lang === 'hi' ? 'सुखाड़िया सर्कल' : 'Sukhadia Circle');
+  const [origin, setOrigin] = useState('');
+  const [destination, setDestination] = useState('');
   const [allStops, setAllStops] = useState([]);
   const [suggestions, setSuggestions] = useState({ field: null, items: [] });
   const [tripPlan, setTripPlan] = useState(null);
@@ -18,6 +18,37 @@ export default function HomePage() {
   const [planError, setPlanError] = useState('');
   const [liveBuses, setLiveBuses] = useState([]);
   const [activeBusCount, setActiveBusCount] = useState(0);
+
+  // Restore persisted search from sessionStorage or URL query params on mount
+  useEffect(() => {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlFrom = urlParams.get('from');
+      const urlTo = urlParams.get('to');
+
+      const savedFrom = urlFrom || sessionStorage.getItem('aglibus_search_from') || (lang === 'hi' ? 'चेटक सर्कल' : 'Chetak Circle');
+      const savedTo = urlTo || sessionStorage.getItem('aglibus_search_to') || (lang === 'hi' ? 'सुखाड़िया सर्कल' : 'Sukhadia Circle');
+      const savedPlan = sessionStorage.getItem('aglibus_search_plan');
+
+      setOrigin(savedFrom);
+      setDestination(savedTo);
+
+      if (savedPlan) {
+        try {
+          const parsed = JSON.parse(savedPlan);
+          if (parsed && parsed.plans) {
+            setTripPlan(parsed);
+          }
+        } catch (e) {
+          console.error('Failed to parse cached trip plan:', e);
+        }
+      } else if (urlFrom && urlTo) {
+        executePlanTrip(urlFrom, urlTo);
+      }
+    } catch (e) {
+      console.error('Failed to restore search state:', e);
+    }
+  }, []);
 
   // Fetch stops list once for autocomplete and live fleet
   useEffect(() => {
@@ -57,9 +88,23 @@ export default function HomePage() {
     return () => clearInterval(interval);
   }, []);
 
+  const persistSearchQuery = (fromVal, toVal) => {
+    try {
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('aglibus_search_from', fromVal);
+        sessionStorage.setItem('aglibus_search_to', toVal);
+      }
+    } catch (e) {}
+  };
+
   const handleInputChange = (field, value) => {
-    if (field === 'origin') setOrigin(value);
-    else setDestination(value);
+    if (field === 'origin') {
+      setOrigin(value);
+      persistSearchQuery(value, destination);
+    } else {
+      setDestination(value);
+      persistSearchQuery(origin, value);
+    }
 
     if (value.trim().length > 1) {
       const q = value.toLowerCase();
@@ -75,8 +120,13 @@ export default function HomePage() {
 
   const selectSuggestion = (field, stop) => {
     const displayName = getStopDisplayName(stop);
-    if (field === 'origin') setOrigin(displayName);
-    else setDestination(displayName);
+    if (field === 'origin') {
+      setOrigin(displayName);
+      persistSearchQuery(displayName, destination);
+    } else {
+      setDestination(displayName);
+      persistSearchQuery(origin, displayName);
+    }
     setSuggestions({ field: null, items: [] });
   };
 
@@ -84,31 +134,61 @@ export default function HomePage() {
     const temp = origin;
     setOrigin(destination);
     setDestination(temp);
+    persistSearchQuery(destination, temp);
   };
 
-  const handlePlanTrip = async () => {
-    if (!origin.trim() || !destination.trim()) return;
+  const executePlanTrip = async (fromVal, toVal) => {
+    if (!fromVal?.trim() || !toVal?.trim()) return;
     setIsSearching(true);
     setPlanError('');
-    setTripPlan(null);
 
     try {
-      const res = await fetch(`/api/plan?from=${encodeURIComponent(origin)}&to=${encodeURIComponent(destination)}`);
+      const res = await fetch(`/api/plan?from=${encodeURIComponent(fromVal)}&to=${encodeURIComponent(toVal)}`);
       const data = await res.json();
       if (!res.ok) {
         setPlanError(data.error || (lang === 'hi' ? 'कोई सीधा रूट नहीं मिला' : 'No direct or connecting route found'));
+        setTripPlan(null);
       } else {
         setTripPlan(data);
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('aglibus_search_from', fromVal);
+          sessionStorage.setItem('aglibus_search_to', toVal);
+          sessionStorage.setItem('aglibus_search_plan', JSON.stringify(data));
+          window.history.replaceState(null, '', `?from=${encodeURIComponent(fromVal)}&to=${encodeURIComponent(toVal)}`);
+        }
       }
     } catch (err) {
       setPlanError(lang === 'hi' ? 'रूट खोजने में त्रुटि हुई' : 'Network error while planning trip');
+      setTripPlan(null);
     } finally {
       setIsSearching(false);
     }
   };
 
+  const handlePlanTrip = () => {
+    executePlanTrip(origin, destination);
+  };
+
+  const clearSearch = () => {
+    const defaultFrom = lang === 'hi' ? 'चेटक सर्कल' : 'Chetak Circle';
+    const defaultTo = lang === 'hi' ? 'सुखाड़िया सर्कल' : 'Sukhadia Circle';
+    setOrigin(defaultFrom);
+    setDestination(defaultTo);
+    setTripPlan(null);
+    setPlanError('');
+    try {
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('aglibus_search_from');
+        sessionStorage.removeItem('aglibus_search_to');
+        sessionStorage.removeItem('aglibus_search_plan');
+        window.history.replaceState(null, '', window.location.pathname);
+      }
+    } catch (e) {}
+  };
+
   const setQuickDestination = (stopName) => {
     setDestination(stopName);
+    persistSearchQuery(origin, stopName);
   };
 
   return (
@@ -297,15 +377,25 @@ export default function HomePage() {
       {tripPlan && tripPlan.plans && tripPlan.plans.length > 0 && (
         <section className="px-4 pb-4 flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <h2 className="font-bold text-sm text-on-surface">
-              {lang === 'hi' ? 'उपलब्ध बस रूट (Direct & Connecting)' : 'Available Transit Options'}
-            </h2>
-            <span className="text-xs text-secondary font-bold">
-              {tripPlan.plans.length} {lang === 'hi' ? 'विकल्प मिले' : 'Options'}
-            </span>
+            <div>
+              <h2 className="font-bold text-sm text-on-surface">
+                {lang === 'hi' ? 'उपलब्ध बस रूट (Direct & Connecting)' : 'Available Transit Options'}
+              </h2>
+              <span className="text-xs text-secondary font-bold">
+                {tripPlan.plans.length} {lang === 'hi' ? 'विकल्प मिले' : 'Options found'}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={clearSearch}
+              className="px-2.5 py-1 text-xs text-on-surface-variant hover:text-error font-medium flex items-center gap-1 rounded-lg bg-surface-container hover:bg-error/10 transition-colors"
+            >
+              <span className="material-symbols-outlined text-[14px]">refresh</span>
+              <span>{lang === 'hi' ? 'रीसेट' : 'Reset'}</span>
+            </button>
           </div>
 
-          <div className="flex flex-col gap-2.5">
+          <div className="flex flex-col gap-3">
             {tripPlan.plans.map((opt, i) => {
               const totalMin = opt.totalMinutes || opt.minutes || 15;
               const isDirect = (opt.transferCount != null ? opt.transferCount : opt.legs.length - 1) === 0;
@@ -315,7 +405,7 @@ export default function HomePage() {
               return (
                 <div
                   key={i}
-                  className="bg-surface-container-lowest rounded-2xl p-4 shadow-sm border border-outline-variant/30 flex flex-col gap-3 hover:border-primary/40 transition-colors"
+                  className="bg-surface-container-lowest rounded-2xl p-4 shadow-sm border border-outline-variant/30 flex flex-col gap-3.5 hover:border-primary/40 transition-colors"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -333,7 +423,7 @@ export default function HomePage() {
                   </div>
 
                   {/* Route legs detail */}
-                  <div className="flex flex-col gap-2 pl-2 border-l-2 border-primary/30">
+                  <div className="flex flex-col gap-3 pl-2.5 border-l-2 border-primary/30">
                     {opt.legs.map((leg, legIdx) => {
                       const legCode = leg.routeCode || leg.code || leg.routeId || '';
                       const legTitle = lang === 'en'
@@ -342,20 +432,76 @@ export default function HomePage() {
                       const fromName = getStopDisplayName(leg.fromStop || leg.from);
                       const toName = getStopDisplayName(leg.toStop || leg.to);
                       const stopsNum = leg.stopsCount || (leg.stopSequence ? leg.stopSequence.length : 0);
+                      const dirLabel = lang === 'en' ? (leg.directionLabelEn || `Towards ${toName}`) : (leg.directionLabel || `${toName} की ओर`);
+                      const routeLiveBuses = leg.liveBuses || [];
 
                       return (
-                        <div key={legIdx} className="text-xs flex flex-col gap-0.5">
-                          <div className="flex items-center gap-1.5 font-bold text-on-surface">
-                            <span className="px-1.5 py-0.2 rounded bg-surface-container-high text-primary font-extrabold text-[10px]">
-                              {legCode}
+                        <div key={legIdx} className="text-xs flex flex-col gap-1.5">
+                          {/* Route header with Direction Label */}
+                          <div className="flex flex-wrap items-center justify-between gap-1.5 font-bold text-on-surface">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className="px-2 py-0.5 rounded-md bg-primary text-on-primary font-black text-[11px] shrink-0">
+                                {legCode}
+                              </span>
+                              <span className="font-extrabold text-on-surface text-[13px] truncate">
+                                {legTitle}
+                              </span>
+                            </div>
+                            <span className="px-2 py-0.5 rounded-full bg-secondary-fixed text-on-secondary-fixed font-bold text-[10.5px] uppercase shrink-0">
+                              🎯 {dirLabel}
                             </span>
-                            <span className="truncate">{legTitle}</span>
                           </div>
-                          <div className="text-[12px] text-on-surface-variant flex items-center gap-1 mt-0.5">
+
+                          {/* From ➔ To */}
+                          <div className="text-[12px] text-on-surface-variant flex items-center gap-1.5 pl-0.5">
                             <span className="font-semibold text-on-surface">{fromName}</span>
                             <span className="material-symbols-outlined text-[13px] text-primary">arrow_forward</span>
                             <span className="font-semibold text-on-surface">{toName}</span>
                             <span className="text-secondary font-medium">({stopsNum} {lang === 'hi' ? 'स्टॉप्स' : 'stops'})</span>
+                          </div>
+
+                          {/* Live buses badge list or frequency */}
+                          <div className="mt-1 bg-surface-container/50 p-2.5 rounded-xl border border-outline-variant/20 flex flex-col gap-1.5">
+                            <div className="flex items-center justify-between text-[11px] font-bold">
+                              <span className="flex items-center gap-1.5 text-primary">
+                                <span className="w-2 h-2 rounded-full bg-secondary animate-pulse" />
+                                {lang === 'hi' ? 'इस दिशा में लाइव बसें:' : 'Live Buses in this Direction:'}
+                              </span>
+                              <span className="text-[10px] text-on-surface-variant font-semibold">
+                                {routeLiveBuses.length > 0 ? `${routeLiveBuses.length} ${lang === 'hi' ? 'सक्रिय' : 'Active'}` : (lang === 'hi' ? 'फ्रीक्वेंसी: हर 15-20 मिनट' : 'Every 15-20m')}
+                              </span>
+                            </div>
+
+                            {routeLiveBuses.length > 0 ? (
+                              <div className="flex flex-wrap gap-1.5 pt-0.5">
+                                {routeLiveBuses.map((bus) => (
+                                  <Link
+                                    key={bus.id}
+                                    href={`/track?route=${leg.routeId}&bus=${bus.id}`}
+                                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface-container-lowest hover:bg-primary hover:text-on-primary border border-outline-variant/40 text-on-surface font-bold text-[11px] transition-all shadow-2xs group"
+                                    title={lang === 'hi' ? `${bus.plate} को मैप पर ट्रैक करें` : `Track ${bus.plate} on map`}
+                                  >
+                                    <span className="material-symbols-outlined text-[14px] text-primary group-hover:text-on-primary">
+                                      directions_bus
+                                    </span>
+                                    <span className="font-bold">{bus.plate}</span>
+                                    <span className="px-1 py-0.2 rounded bg-surface-container-high group-hover:bg-primary-container group-hover:text-on-primary-container text-[10px] font-semibold text-secondary">
+                                      {bus.speed > 0 ? `${bus.speed} km/h` : (lang === 'hi' ? 'खड़ी है' : 'Halt')}
+                                    </span>
+                                  </Link>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="flex items-center justify-between text-[11px] text-on-surface-variant">
+                                <span>{lang === 'hi' ? 'नियमित बस सेवा (हर 15-20 मिनट में)' : 'Regular city service (every 15-20 mins)'}</span>
+                                <Link
+                                  href={`/timetable?route=${leg.routeId}`}
+                                  className="text-primary font-bold hover:underline shrink-0 ml-1"
+                                >
+                                  {lang === 'hi' ? 'शेड्यूल देखें →' : 'Schedule →'}
+                                </Link>
+                              </div>
+                            )}
                           </div>
                         </div>
                       );

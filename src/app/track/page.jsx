@@ -49,6 +49,19 @@ function LiveTrackerContent() {
     loadStaticData();
   }, []);
 
+  // Sync state if route or bus URL query params change via navigation
+  useEffect(() => {
+    if (routeParam && routeParam !== selectedRouteId) {
+      setSelectedRouteId(routeParam);
+    }
+  }, [routeParam]);
+
+  useEffect(() => {
+    if (busParam && busParam !== selectedBusId) {
+      setSelectedBusId(busParam);
+    }
+  }, [busParam]);
+
   // Poll Fleet data every 15 seconds
   useEffect(() => {
     let timer;
