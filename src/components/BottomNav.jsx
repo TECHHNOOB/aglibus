@@ -22,7 +22,7 @@ export default function BottomNav() {
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-surface-container-lowest/95 backdrop-blur-xl border-t border-surface-container shadow-[0_-8px_24px_rgba(14,28,47,0.06)]">
       <div className="max-w-2xl mx-auto h-16 px-2 flex items-center justify-around">
         {navItems.map((item) => {
-          const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
+          const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href)) || (item.href === '/' && pathname === '/search');
           return (
             <Link
               key={item.href}

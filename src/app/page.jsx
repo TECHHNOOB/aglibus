@@ -166,7 +166,9 @@ export default function HomePage() {
   };
 
   const handlePlanTrip = () => {
-    executePlanTrip(origin, destination);
+    if (!origin?.trim() || !destination?.trim()) return;
+    persistSearchQuery(origin, destination);
+    router.push(`/search?from=${encodeURIComponent(origin)}&to=${encodeURIComponent(destination)}`);
   };
 
   const clearSearch = () => {
