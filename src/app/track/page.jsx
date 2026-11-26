@@ -192,43 +192,67 @@ function LiveTrackerContent() {
     return () => clearInterval(timer);
   }, [selectedRouteId]);
 
-  // Keep selected bus valid within matching buses, prioritizing buses moving in the selected direction
+  // Helper to get bus movement direction (+1 forward, -1 reverse, 0 unknown) on activeRoute
+  const getBusDirOnRoute = (bus) => {
+    if (!bus) return 0;
+    const curRId = String(activeRoute?.id || selectedRouteId);
+    const m = bus.matches?.find(item => item.routeId === curRId && item.basis !== 'shared_corridor');
+    return m?.direction || 0;
+  };
+
+  const targetDir = isReverse ? -1 : 1;
+  const sameOrUnknownBuses = useMemo(() => {
+    return matchingBuses.filter(b => {
+      const d = getBusDirOnRoute(b);
+      return d === 0 || d === targetDir;
+    });
+  }, [matchingBuses, targetDir, activeRoute, selectedRouteId]);
+
+  const oppositeDirBuses = useMemo(() => {
+    return matchingBuses.filter(b => {
+      const d = getBusDirOnRoute(b);
+      return d !== 0 && d !== targetDir;
+    });
+  }, [matchingBuses, targetDir, activeRoute, selectedRouteId]);
+
+  // Keep selected bus valid — NEVER auto-select a bus moving in the OPPOSITE direction!
   useEffect(() => {
     if (matchingBuses.length === 0) {
       setSelectedBusId(null);
       return;
     }
-    // If busParam matches a bus on route, select it
+    // If busParam was explicitly requested and belongs to this route, honor it
     if (busParam && matchingBuses.some(b => b.id.toLowerCase() === busParam.toLowerCase())) {
       setSelectedBusId(busParam);
       return;
     }
-    const targetDir = isReverse ? -1 : 1;
-    const curRId = String(activeRoute?.id || selectedRouteId);
 
-    // Otherwise keep current or auto-select bus moving in the user's direction
     setSelectedBusId(prev => {
-      if (prev && matchingBuses.some(b => b.id.toLowerCase() === prev.toLowerCase())) {
+      // Keep prev ONLY if it isn't moving opposite (unless explicitly clicked by user via handleSelectBus)
+      if (prev && sameOrUnknownBuses.some(b => b.id.toLowerCase() === prev.toLowerCase())) {
         return prev;
       }
-      const sameDir = matchingBuses.find(b =>
-        b.matches?.some(m => m.routeId === curRId && m.direction === targetDir)
-      );
-      if (sameDir) return sameDir.id;
-      const moving = matchingBuses.find(b => b.speed > 0);
-      return moving ? moving.id : matchingBuses[0].id;
-    });
-  }, [matchingBuses, busParam, isReverse, activeRoute, selectedRouteId]);
+      // 1. Confirmed moving in user's exact direction
+      const confirmedSame = sameOrUnknownBuses.find(b => getBusDirOnRoute(b) === targetDir);
+      if (confirmedSame) return confirmedSame.id;
 
-  // Active bus: strictly from matchingBuses
+      // 2. If there's an unconfirmed moving bus (e.g. speed >= 2) not known to be opposite, select it;
+      // otherwise do NOT show stationary/depot buses or opposite buses as approaching!
+      const movingUnknown = sameOrUnknownBuses.find(b => (b.speed || 0) >= 2);
+      if (movingUnknown) return movingUnknown.id;
+
+      return null;
+    });
+  }, [matchingBuses, sameOrUnknownBuses, busParam, isReverse, activeRoute, selectedRouteId]);
+
+  // Active bus: only resolved if selectedBusId is explicitly set (no blind fallback to opposite-direction bus!)
   const currentBus = useMemo(() => {
-    if (!matchingBuses.length) return null;
-    if (selectedBusId) {
-      const found = matchingBuses.find(b => b.id.toLowerCase() === selectedBusId.toLowerCase());
-      if (found) return found;
-    }
-    return matchingBuses[0] || null;
+    if (!selectedBusId || !matchingBuses.length) return null;
+    return matchingBuses.find(b => b.id.toLowerCase() === selectedBusId.toLowerCase()) || null;
   }, [selectedBusId, matchingBuses]);
+
+  const currentBusDir = getBusDirOnRoute(currentBus);
+  const isCurrentBusOpposite = Boolean(currentBus && currentBusDir !== 0 && currentBusDir !== targetDir);
 
   // Compute active stop index along directional route stops
   const currentStopIndex = useMemo(() => {
@@ -292,14 +316,16 @@ function LiveTrackerContent() {
   const speedDisplay = currentBus?.speed != null ? `${Math.round(currentBus.speed)} km/h` : (lang === 'hi' ? 'खड़ी है' : 'Halt');
   const currentHaltStop = routeStops[currentStopIndex] || routeStops[0] || { name: 'आरंभिक स्टॉप', english: 'Origin Stop' };
 
-  // Calculate dynamic ETA time for each stop based on current bus position & time
+  // Calculate dynamic ETA time for each stop based on current bus position, direction & time
   const getStopETA = (index) => {
     const now = new Date();
     const totalRouteMin = activeRoute?.minutes || 35;
     const totalStops = Math.max(1, routeStops.length - 1);
     const avgMinPerStop = Math.max(2, Math.round(totalRouteMin / totalStops));
 
-    const diff = index - currentStopIndex;
+    // If bus is moving in opposite direction, its progress along displayed routeStops goes backwards (-1)!
+    const displayMoveSign = isCurrentBusOpposite ? -1 : 1;
+    const diff = (index - currentStopIndex) * displayMoveSign;
     const targetTimestamp = new Date(now.getTime() + diff * avgMinPerStop * 60000);
     const ist = new Date(targetTimestamp.getTime() + 5.5 * 60 * 60 * 1000);
 
@@ -401,10 +427,7 @@ function LiveTrackerContent() {
             const isSelected = currentBus && currentBus.id === bus.id;
             const busPlate = bus.plateFormatted || formatBusPlate(bus.id);
             const busMoving = bus.speed && bus.speed >= 2;
-            const targetDir = isReverse ? -1 : 1;
-            const curRId = String(activeRoute?.id || selectedRouteId);
-            const busMatch = bus.matches?.find(m => m.routeId === curRId);
-            const busDir = busMatch?.direction || 0;
+            const busDir = getBusDirOnRoute(bus);
             const isSameDir = busDir === targetDir;
             const isOppositeDir = busDir !== 0 && busDir !== targetDir;
 
@@ -442,28 +465,84 @@ function LiveTrackerContent() {
         </section>
       )}
 
-      {/* Status Banner when No Live Buses are currently on this route */}
-      {matchingBuses.length === 0 && !isLoading && (
-        <section className="px-4 py-3">
-          <div className="bg-surface-container-low border border-outline-variant/30 rounded-2xl p-3.5 flex items-center justify-between gap-3 shadow-2xs">
-            <div className="flex items-center gap-3 min-w-0">
-              <span className="w-10 h-10 rounded-xl bg-surface-container-high text-primary flex items-center justify-center shrink-0">
-                <span className="material-symbols-outlined text-[22px]">schedule</span>
-              </span>
-              <div className="flex flex-col min-w-0">
-                <span className="font-extrabold text-xs text-on-surface">
-                  {lang === 'hi' ? 'लाइव GPS डेटा उपलब्ध नहीं है' : 'No Live GPS Data Available'}
-                </span>
-                <span className="text-[11px] text-on-surface-variant mt-0.5">
+      {/* OPPOSITE DIRECTION WARNING BANNER (Prevents user waiting for a bus going the wrong way!) */}
+      {isCurrentBusOpposite && currentBus && (
+        <section className="px-4 pt-3">
+          <div className="bg-error-container text-on-error-container border border-error/40 rounded-2xl p-3.5 flex flex-col gap-2 shadow-sm">
+            <div className="flex items-start gap-2.5">
+              <span className="material-symbols-outlined text-error text-[22px] shrink-0">warning</span>
+              <div className="flex-1 min-w-0">
+                <p className="font-extrabold text-xs sm:text-sm leading-tight">
                   {lang === 'hi'
-                    ? `डेटाबेस व समय सारणी (हर ${activeRoute?.headway || '15-20'} मिनट) के अनुसार अनुमानित समय नीचे देखें`
-                    : `Showing estimated times from database & schedule (every ${activeRoute?.headway || '15-20'} mins)`}
-                </span>
+                    ? `⚠️ सावधान: बस ${currentBus.plateFormatted || formatBusPlate(currentBus.id)} विपरीत दिशा में जा रही है!`
+                    : `⚠️ Opposite Direction: Bus ${currentBus.plateFormatted || formatBusPlate(currentBus.id)} is going AWAY!`}
+                </p>
+                <p className="text-[11px] font-medium mt-0.5">
+                  {lang === 'hi'
+                    ? `यह बस ${getStopDisplayName(routeStops[0])} की तरफ जा रही है, ${getStopDisplayName(routeStops[routeStops.length - 1])} की ओर नहीं।`
+                    : `Moving towards ${getStopDisplayName(routeStops[0])}, NOT towards ${getStopDisplayName(routeStops[routeStops.length - 1])}.`}
+                </p>
               </div>
             </div>
-            <span className="px-2.5 py-1 rounded-full bg-surface-container-high text-on-surface-variant text-[10px] font-extrabold shrink-0 border border-outline-variant/40">
-              Estimated
-            </span>
+            <button
+              type="button"
+              onClick={handleToggleDirection}
+              className="w-full py-2 px-3 rounded-xl bg-error text-on-error font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-xs"
+            >
+              <span className="material-symbols-outlined text-[16px]">swap_vert</span>
+              <span>
+                {lang === 'hi'
+                  ? `सही दिशा (${getStopDisplayName(routeStops[0])} की ओर) देखें`
+                  : `Switch to Follow This Bus (Towards ${getStopDisplayName(routeStops[0])})`}
+              </span>
+            </button>
+          </div>
+        </section>
+      )}
+
+      {/* Status Banner when No Live Bus is running in the user's selected direction */}
+      {!currentBus && !isLoading && (
+        <section className="px-4 py-3">
+          <div className="bg-surface-container-low border border-outline-variant/30 rounded-2xl p-3.5 flex flex-col gap-2.5 shadow-2xs">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <span className="w-10 h-10 rounded-xl bg-surface-container-high text-primary flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-[22px]">schedule</span>
+                </span>
+                <div className="flex flex-col min-w-0">
+                  <span className="font-extrabold text-xs text-on-surface">
+                    {lang === 'hi'
+                      ? `${getStopDisplayName(routeStops[routeStops.length - 1])} की ओर अभी कोई लाइव बस नहीं`
+                      : `No live bus heading towards ${getStopDisplayName(routeStops[routeStops.length - 1])}`}
+                  </span>
+                  <span className="text-[11px] text-on-surface-variant mt-0.5">
+                    {lang === 'hi'
+                      ? `डेटाबेस व समय सारणी (हर ${activeRoute?.headway || '15-20'} मिनट) के अनुसार अनुमानित समय नीचे देखें`
+                      : `Showing estimated timetable below (every ${activeRoute?.headway || '15-20'} mins)`}
+                  </span>
+                </div>
+              </div>
+              <span className="px-2.5 py-1 rounded-full bg-surface-container-high text-on-surface-variant text-[10px] font-extrabold shrink-0 border border-outline-variant/40">
+                Estimated
+              </span>
+            </div>
+
+            {oppositeDirBuses.length > 0 && (
+              <div className="pt-2 border-t border-outline-variant/30 flex items-center justify-between gap-2">
+                <span className="text-[11px] font-semibold text-on-surface-variant">
+                  {lang === 'hi'
+                    ? `ℹ️ ${oppositeDirBuses.length} बस विपरीत दिशा (${getStopDisplayName(routeStops[0])} की ओर) में चल रही है`
+                    : `ℹ️ ${oppositeDirBuses.length} bus active in opposite direction (Towards ${getStopDisplayName(routeStops[0])})`}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleToggleDirection}
+                  className="px-2.5 py-1 rounded-lg bg-primary text-on-primary text-[11px] font-bold shrink-0 active:scale-95"
+                >
+                  {lang === 'hi' ? '⇄ दिशा बदलें' : '⇄ Switch Dir'}
+                </button>
+              </div>
+            )}
           </div>
         </section>
       )}
@@ -565,8 +644,8 @@ function LiveTrackerContent() {
           {/* Base Background Track Line */}
           <div className="absolute left-[23px] top-4 bottom-8 w-[5px] bg-outline-variant/60 rounded-full" />
           
-          {/* Active Progress Track Line (Only when bus is active) */}
-          {currentBus && (
+          {/* Active Progress Track Line (Only when bus is moving in the selected direction) */}
+          {currentBus && !isCurrentBusOpposite && (
             <div
               className="absolute left-[23px] top-4 w-[5px] bg-secondary rounded-full transition-all duration-500"
               style={{
@@ -577,10 +656,11 @@ function LiveTrackerContent() {
 
           {routeStops.map((stop, index) => {
             const hasBus = Boolean(currentBus);
-            const isDeparted = hasBus && index < currentStopIndex;
             const isCurrent = hasBus && index === currentStopIndex;
-            const isNext = hasBus && index === currentStopIndex + 1;
-            const isFinal = index === routeStops.length - 1;
+            // If current bus is moving in opposite direction, its stops ahead are index < currentStopIndex (backwards)!
+            const isDeparted = hasBus && (isCurrentBusOpposite ? index > currentStopIndex : index < currentStopIndex);
+            const isNext = hasBus && (isCurrentBusOpposite ? index === currentStopIndex - 1 : index === currentStopIndex + 1);
+            const isFinal = isCurrentBusOpposite ? index === 0 : index === routeStops.length - 1;
             const stopEta = getStopETA(index);
 
             return (

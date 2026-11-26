@@ -763,13 +763,19 @@ function SearchResultsContent() {
                 <div className="flex items-center gap-2 pt-0.5">
                   <Link
                     href={`/track?route=${primaryRouteId}${nextUpcomingBus ? `&bus=${nextUpcomingBus.id}` : ''}&dir=${primaryLeg?.isReverse ? 'reverse' : 'forward'}&from=${primaryLeg?.fromStop?.id ?? ''}&to=${primaryLeg?.toStop?.id ?? ''}`}
-                    className="flex-1 h-11 bg-secondary hover:bg-secondary/90 active:scale-[0.98] text-on-secondary rounded-xl flex items-center justify-center gap-2 font-bold text-xs shadow-xs transition-all"
+                    className={`flex-1 h-11 active:scale-[0.98] rounded-xl flex items-center justify-center gap-2 font-bold text-xs shadow-xs transition-all ${
+                      hasUpcomingBus
+                        ? 'bg-secondary hover:bg-secondary/90 text-on-secondary'
+                        : 'bg-primary hover:bg-primary/95 text-on-primary'
+                    }`}
                   >
-                    <span className="material-symbols-outlined text-[19px]">near_me</span>
+                    <span className="material-symbols-outlined text-[19px]">
+                      {hasUpcomingBus ? 'near_me' : 'alt_route'}
+                    </span>
                     <span>
                       {hasUpcomingBus
                         ? (lang === 'hi' ? `लाइव ट्रैक करें (${nextUpcomingBus.plate})` : `Track Live (${nextUpcomingBus.plate})`)
-                        : (lang === 'hi' ? 'लाइव देखें / Live Track' : 'Live Track Route')}
+                        : (lang === 'hi' ? 'रूट व समय देखें / Route Map' : 'View Route & Schedule')}
                     </span>
                   </Link>
 

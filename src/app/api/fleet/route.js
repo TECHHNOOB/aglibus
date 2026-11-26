@@ -14,6 +14,20 @@ import {
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+// Keep server-side motion tracking warm across idle gaps so direction (+1/-1) is always ready
+if (typeof window === 'undefined' && process.env.NEXT_PHASE !== 'phase-production-build' && !globalThis.__aglibusMotionPoller) {
+  globalThis.__aglibusMotionPoller = setInterval(async () => {
+    try {
+      const data = await fleet();
+      for (const bus of data.buses || []) {
+        if (bus.gpsAt && data.checkedAt - bus.gpsAt <= 180000 && bus.source !== 'last') {
+          directedMatches(bus, data.checkedAt);
+        }
+      }
+    } catch {}
+  }, 25000);
+}
+
 function formatPlate(id) {
   if (!id) return 'City Bus';
   const m = id.match(/^([A-Z]{2})(\d{2})([A-Z]+)(\d{4})$/);

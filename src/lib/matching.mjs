@@ -138,7 +138,7 @@ const motionByBus = globalThis.__aglibusMotionByBus || (globalThis.__aglibusMoti
 
 function directedMatches(bus, checkedAt = Date.now()) {
   for (const [id, sample] of motionByBus) {
-    if (checkedAt - sample.time > 180000) motionByBus.delete(id);
+    if (checkedAt - sample.time > 360000) motionByBus.delete(id);
   }
   const matches = [];
   const previous = motionByBus.get(bus.id);
@@ -162,13 +162,14 @@ function directedMatches(bus, checkedAt = Date.now()) {
 
     const old = previous?.routes.get(route.id);
     let sample = { time: bus.gpsAt, progress, lat: bus.lat, lng: bus.lng, direction: 0 };
-    if (old && bus.gpsAt >= old.time && bus.gpsAt - old.time < 120000) {
+    if (old && bus.gpsAt >= old.time && bus.gpsAt - old.time < 300000) {
       const meters = 111320 * Math.hypot(bus.lat - old.lat, (bus.lng - old.lng) * Math.cos(bus.lat * Math.PI / 180));
       const delta = progress - old.progress;
       if (bus.gpsAt > old.time && meters >= 65 && Math.abs(delta) >= 0.04) {
         if (meters / ((bus.gpsAt - old.time) / 1000) <= 35) sample.direction = Math.sign(delta);
       } else {
-        sample = old;
+        // Keep previous known travel direction while stopped at red lights/stops
+        sample = { ...old, time: bus.gpsAt };
       }
     }
     if (progress === 0 || progress === route.stops.length - 1) sample = { ...sample, direction: 0 };
