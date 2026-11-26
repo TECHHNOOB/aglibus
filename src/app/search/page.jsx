@@ -660,6 +660,18 @@ function SearchResultsContent() {
                                 : `Closed 9:30 PM – 6:30 AM • Next morning bus ${times.dep.time} ${times.dep.ampm}`}
                             </p>
                           </>
+                        ) : opt.scheduleSource === 'gtfs' && opt.nextScheduledTimes?.length > 0 ? (
+                          <>
+                            <p className="text-xs font-bold text-on-surface truncate flex items-center gap-1.5">
+                              <span className="text-primary font-black">
+                                {lang === 'hi' ? '📅 GTFS निर्धारित समय:' : '📅 GTFS Schedule:'}
+                              </span>
+                              <span>{opt.nextScheduledTimes[0]}</span>
+                            </p>
+                            <p className="text-[10.5px] text-on-surface-variant font-medium truncate mt-0.5">
+                              {lang === 'hi' ? 'आगामी समय:' : 'Upcoming:'} {opt.nextScheduledTimes.join(' • ')}
+                            </p>
+                          </>
                         ) : (
                           <>
                             <p className="text-xs font-bold text-on-surface truncate">

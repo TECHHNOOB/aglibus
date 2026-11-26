@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { passengerRoutes, canonicalStop, stopNames, stopEnglish, stopLocations, planTrips, dutyRouteHints } from '@/lib/network.mjs';
 import { fleet } from '@/lib/feeds.mjs';
 import { directedMatches } from '@/lib/matching.mjs';
+import { gtfsDepartures, gtfsRouteScheduleSummary } from '@/lib/gtfs.mjs';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -378,17 +379,38 @@ export async function GET(request) {
       };
     });
 
-    // Plan-level departure & arrival time calculation in IST
+    // Plan-level departure & arrival time calculation in IST (GPS -> GTFS Schedule -> Headway fallback)
     const primaryLeg = legs[0];
     const hasLiveBus = Boolean(primaryLeg?.nextUpcomingBus);
-    const isServiceClosed = isNightWindow && !hasLiveBus;
+    const primaryCode = primaryLeg?.routeCode || '';
+    const gtfsDeps = primaryLeg
+      ? gtfsDepartures(primaryLeg.fromStop.id, primaryLeg.toStop.id, now.getTime(), 0, primaryCode || null)
+      : [];
+    const gtfsSummary = primaryCode ? gtfsRouteScheduleSummary(primaryCode, now.getTime()) : null;
 
+    let isServiceClosed = isNightWindow && !hasLiveBus;
     let departureMinutes;
     let depDate;
+    let arrDate;
+    let scheduleSource = 'headway';
 
     if (hasLiveBus) {
+      scheduleSource = 'gps';
       departureMinutes = primaryLeg.nextUpcomingBus.etaMinutes;
       depDate = new Date(now.getTime() + departureMinutes * 60000);
+      arrDate = new Date(depDate.getTime() + totalMinutes * 60000);
+    } else if (gtfsDeps.length > 0) {
+      scheduleSource = 'gtfs';
+      const nextTrip = gtfsDeps[0];
+      depDate = new Date(nextTrip.start);
+      arrDate = new Date(nextTrip.end);
+      departureMinutes = Math.max(1, Math.round((nextTrip.start - now.getTime()) / 60000));
+      // If next GTFS trip is more than 3 hours away during night hours, mark service closed for tonight
+      if (isNightWindow && departureMinutes > 180) {
+        isServiceClosed = true;
+      } else {
+        isServiceClosed = false;
+      }
     } else if (isServiceClosed) {
       // Next morning first bus at 06:30 AM IST (+ staggered 10 mins per option)
       const targetMorningMin = (6 * 60 + 30) + planIdx * 10;
@@ -397,12 +419,14 @@ export async function GET(request) {
         : targetMorningMin - istMinutesOfDay;
       departureMinutes = minsUntilMorning;
       depDate = new Date(now.getTime() + minsUntilMorning * 60000);
+      arrDate = new Date(depDate.getTime() + totalMinutes * 60000);
     } else {
       departureMinutes = 8 + planIdx * 10;
       depDate = new Date(now.getTime() + departureMinutes * 60000);
+      arrDate = new Date(depDate.getTime() + totalMinutes * 60000);
     }
 
-    const arrDate = new Date(depDate.getTime() + totalMinutes * 60000);
+    const nextScheduledTimes = gtfsDeps.slice(0, 3).map(d => formatClockIST(new Date(d.start)).full);
 
     return {
       totalMinutes,
@@ -411,6 +435,9 @@ export async function GET(request) {
       departureMinutes,
       departureTime: formatClockIST(depDate),
       arrivalTime: formatClockIST(arrDate),
+      scheduleSource,
+      nextScheduledTimes,
+      gtfsSummary,
       isServiceClosed,
       hasLiveUpcomingBus: hasLiveBus,
       nextUpcomingBus: primaryLeg?.nextUpcomingBus || null,
