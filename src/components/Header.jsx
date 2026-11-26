@@ -15,7 +15,7 @@ export default function Header() {
           <img
             src="/udaipur%20bus%20logo.png"
             alt="Udaipur City Bus Logo"
-            className="h-9 sm:h-10 w-auto object-contain max-w-[175px] sm:max-w-[210px] transition-transform group-hover:scale-105"
+            className="h-12 sm:h-14 w-auto object-contain max-w-[220px] sm:max-w-[260px] transition-transform group-hover:scale-105"
           />
           <span className="px-1.5 py-0.2 rounded-full bg-secondary-fixed text-on-secondary-fixed text-[10px] font-extrabold uppercase tracking-wider shrink-0">
             Live

@@ -11,7 +11,7 @@ export default function AboutPage() {
     <div className="flex flex-col w-full pb-10">
       {/* Friendly Header Section */}
       <section className="px-4 pt-4 pb-3 flex flex-col items-center text-center gap-2">
-        <div className="w-56 max-w-xs flex items-center justify-center p-2 mb-1">
+        <div className="w-72 sm:w-80 max-w-sm flex items-center justify-center p-2 mb-1">
           <img
             src="/udaipur%20bus%20logo.png"
             alt="Udaipur City Bus Logo"
