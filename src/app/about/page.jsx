@@ -13,8 +13,8 @@ export default function AboutPage() {
       <section className="px-4 pt-4 pb-3 flex flex-col items-center text-center gap-2">
         <div className="w-56 max-w-xs flex items-center justify-center p-2 mb-1">
           <img
-            src="/logo.png"
-            alt="AgliBus Official Logo"
+            src="/udaipur%20bus%20logo.png"
+            alt="Udaipur City Bus Logo"
             className="w-full h-auto object-contain drop-shadow-xs"
           />
         </div>
