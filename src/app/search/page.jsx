@@ -864,8 +864,8 @@ function SearchResultsContent() {
           </span>
           <span className="text-[11px] text-on-surface-variant mt-0.5 leading-snug">
             {lang === 'hi'
-              ? 'उदयपुर की गलियों में कमजोर नेटवर्क होने पर भी अगलीबस ऑफलाइन समय-सारणी का उपयोग करती है।'
-              : 'AgliBus uses offline timetables and local cell towers when GPS network is low in Udaipur lanes.'}
+              ? 'उदयपुर की गलियों में कमजोर नेटवर्क होने पर भी Udaipur City Bus ऑफलाइन समय-सारणी का उपयोग करता है।'
+              : 'Udaipur City Bus uses offline timetables and local cell towers when GPS network is low in Udaipur lanes.'}
           </span>
         </div>
       </section>

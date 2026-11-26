@@ -319,9 +319,9 @@ function LiveTrackerContent() {
 
   const handleShare = () => {
     const busPlate = currentBus?.plateFormatted || formatBusPlate(currentBus?.id) || 'City Bus';
-    const text = `Live Tracking Route ${activeRoute?.code || selectedRouteId} (${directionalTitle}) on AgliBus. Live ETA & Stops: ${window.location.href}`;
+    const text = `Live Tracking Route ${activeRoute?.code || selectedRouteId} (${directionalTitle}) on Udaipur City Bus. Live ETA & Stops: ${window.location.href}`;
     if (navigator.share) {
-      navigator.share({ title: 'AgliBus Live Tracking', text, url: window.location.href }).catch(() => {});
+      navigator.share({ title: 'Udaipur City Bus Live Tracking', text, url: window.location.href }).catch(() => {});
     } else {
       navigator.clipboard.writeText(window.location.href);
       alert(t('shareCopiedMsg'));

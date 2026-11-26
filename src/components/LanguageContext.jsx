@@ -14,7 +14,7 @@ const LanguageContext = createContext({
 
 const translations = {
   hi: {
-    appTitle: 'AgliBus • अगलीबस',
+    appTitle: 'Udaipur City Bus • उदयपुर सिटी बस',
     citySubtitle: 'उदयपुर सिटी बस सेवा',
     home: 'होम',
     liveTrack: 'लाइव ट्रैक',
@@ -109,7 +109,7 @@ const translations = {
     liveFleetSubtitle: 'उदयपुर जीपीएस ट्रैकर से लाइव डेटा'
   },
   en: {
-    appTitle: 'AgliBus',
+    appTitle: 'Udaipur City Bus',
     citySubtitle: 'Udaipur City Transit',
     home: 'Home',
     liveTrack: 'Live Track',
