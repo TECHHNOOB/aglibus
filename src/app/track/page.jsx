@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
 import { useLanguage } from '@/components/LanguageContext';
-import { dutyRouteHints, stopLocations } from '@/lib/network.mjs';
+import { dutyRouteHints, stopLocations, canonicalStop } from '@/lib/network.mjs';
 
 // Dynamically import BusMap with SSR disabled
 const BusMap = dynamic(() => import('@/components/BusMap'), {
@@ -96,8 +96,8 @@ function LiveTrackerContent() {
     if (fromParam && toParam && routes.length > 0) {
       const active = routes.find(r => r.id === selectedRouteId || r.code === selectedRouteId);
       if (active && active.stops) {
-        const fId = Number(fromParam);
-        const tId = Number(toParam);
+        const fId = canonicalStop(Number(fromParam));
+        const tId = canonicalStop(Number(toParam));
         const fIdx = active.stops.indexOf(fId);
         const tIdx = active.stops.indexOf(tId);
         if (fIdx >= 0 && tIdx >= 0) {
@@ -135,7 +135,7 @@ function LiveTrackerContent() {
     });
   }, [activeRoute, stops, isReverse]);
 
-  // Filter buses that genuinely belong to this route (ZERO FOREIGN BUS FALLBACK)
+  // Filter live buses that genuinely belong to this route (exclude stale & unconfirmed shared_corridor buses)
   const matchingBuses = useMemo(() => {
     const list = fleetData.buses || [];
     if (!selectedRouteId || !activeRoute) return [];
@@ -143,18 +143,31 @@ function LiveTrackerContent() {
     const curRId = String(activeRoute.id || selectedRouteId);
     const curCode = String(activeRoute.code || selectedRouteId);
     const curClean = cleanRouteId(curRId);
+    const targetDir = isReverse ? -1 : 1;
 
-    return list.filter(bus => {
-      const bHint = dutyRouteHints[bus.id] ? String(dutyRouteHints[bus.id]) : '';
-      if (bHint && (bHint === curRId || bHint === curClean)) return true;
-      if (bus.routeId === curRId || bus.routeId === curCode || cleanRouteId(bus.routeId) === curClean) return true;
-      if (bus.routeCode && (bus.routeCode === curCode || cleanRouteId(bus.routeCode) === curClean)) return true;
-      if (bus.matches && bus.matches.some(m => m.routeId === curRId || cleanRouteId(m.routeId) === curClean)) return true;
-      if (bus.assignment && (bus.assignment === curRId || bus.assignment === curCode || bus.assignment.endsWith(curClean))) return true;
-      if (bus.route && (bus.route.includes(curRId) || bus.route.includes(curCode))) return true;
-      return false;
-    });
-  }, [fleetData, selectedRouteId, activeRoute]);
+    return list
+      .filter(bus => {
+        if (bus.live === false || bus.source === 'last') return false;
+        const confirmedMatch = bus.matches?.some(m =>
+          m.basis !== 'shared_corridor' && (m.routeId === curRId || cleanRouteId(m.routeId) === curClean)
+        );
+        if (confirmedMatch) return true;
+        const bHint = dutyRouteHints[bus.id] ? String(dutyRouteHints[bus.id]) : '';
+        if (bHint && (bHint === curRId || bHint === curClean)) return true;
+        if (bus.routeId === curRId || bus.routeId === curCode || cleanRouteId(bus.routeId) === curClean) return true;
+        if (bus.routeCode && (bus.routeCode === curCode || cleanRouteId(bus.routeCode) === curClean)) return true;
+        if (bus.assignment && (bus.assignment === curRId || bus.assignment === curCode || bus.assignment.endsWith(curClean))) return true;
+        if (bus.route && (bus.route.includes(curRId) || bus.route.includes(curCode))) return true;
+        return false;
+      })
+      .sort((a, b) => {
+        const dirA = a.matches?.find(m => m.routeId === curRId)?.direction || 0;
+        const dirB = b.matches?.find(m => m.routeId === curRId)?.direction || 0;
+        const scoreA = dirA === targetDir ? 2 : dirA === 0 ? 1 : 0;
+        const scoreB = dirB === targetDir ? 2 : dirB === 0 ? 1 : 0;
+        return scoreB - scoreA || (b.speed || 0) - (a.speed || 0);
+      });
+  }, [fleetData, selectedRouteId, activeRoute, isReverse]);
 
   // Poll Fleet data every 15 seconds
   useEffect(() => {

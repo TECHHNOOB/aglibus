@@ -62,17 +62,18 @@ export async function GET() {
         } : null
       }));
 
-      // Route determination: from directed GPS/feed matches, duty hints, or assignment (never fake-default to PM4)
-      const primaryMatch = matches.find(m => m.basis !== 'shared_corridor') || matches[0];
-      const assignedRouteId = primaryMatch?.routeId || dutyRouteHints[bus.id] || (bus.assignment ? bus.assignment.replace(/^ud/i, '') : null);
+      // Route determination: ONLY use confirmed non-shared matches, duty hints, or feed assignment (never arbitrary shared_corridor!)
+      const confirmedMatch = matches.find(m => m.basis !== 'shared_corridor');
+      const assignedRouteId = confirmedMatch?.routeId || dutyRouteHints[bus.id] || (bus.assignment ? bus.assignment.replace(/^ud/i, '') : null);
       const matchedRoute = assignedRouteId ? passengerRoutes.find(r => r.id === assignedRouteId) : null;
 
       // Nearest stop along route or overall
       const nearestStop = findNearestStop(bus.lat, bus.lng, matchedRoute?.stops) || findNearestStop(bus.lat, bus.lng);
 
-      // If matches was empty but we know the bus's duty route, add the fallback duty_hint match
-      if (matches.length === 0 && matchedRoute) {
-        matches.push({
+      // Clean out unconfirmed shared_corridor matches if we already have confirmed matches or duty hint
+      const cleanMatches = confirmedMatch ? matches.filter(m => m.basis !== 'shared_corridor') : matches;
+      if (cleanMatches.length === 0 && matchedRoute) {
+        cleanMatches.push({
           routeId: matchedRoute.id,
           basis: 'duty_hint',
           direction: 0,
@@ -89,7 +90,7 @@ export async function GET() {
         routeTitle: matchedRoute?.title || bus.route || 'City Bus',
         routeTitleEn: matchedRoute?.titleEn || routeTitlesEn[matchedRoute?.id] || bus.route || 'City Bus',
         nearestStop,
-        matches
+        matches: cleanMatches
       };
     });
 

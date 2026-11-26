@@ -75,7 +75,16 @@ export async function GET(request) {
     if (/^\d+$/.test(input.trim())) return canonicalStop(Number(input.trim()));
     
     const cleanInput = cleanText(input);
+    const noSpaceInput = cleanInput.replace(/\s+/g, '').replace(/partap/g, 'pratap');
     const inputWords = cleanInput.split(' ').filter(w => w.length > 1).map(w => w.replace(/partap/g, 'pratap'));
+
+    // Explicit alias helper without modifying official stop names
+    if (/(rana|pratap|राणा|प्रताप)/.test(noSpaceInput) && /(station|railway|स्टेशन|रेलवे)/.test(cleanInput)) {
+      return 13;
+    }
+    if (/(city|udaipur|udiyapol|udayapol|सिटी|उदयापोल)/.test(cleanInput) && /(station|railway|स्टेशन|रेलवे)/.test(cleanInput)) {
+      return 109;
+    }
     
     // 1. Exact match in stopEnglish or stopNames
     for (const [idStr, eng] of Object.entries(stopEnglish)) {
@@ -94,7 +103,6 @@ export async function GET(request) {
     }
 
     // 3. Normalized without spaces (handles "ranapratap" matching "rana pratap")
-    const noSpaceInput = cleanInput.replace(/\s+/g, '').replace(/partap/g, 'pratap');
     for (const [idStr, eng] of Object.entries(stopEnglish)) {
       const noSpaceEng = cleanText(eng).replace(/\s+/g, '');
       if (noSpaceEng.includes(noSpaceInput)) return canonicalStop(Number(idStr));
@@ -174,15 +182,18 @@ export async function GET(request) {
   }
 
   const seenTransferPairs = new Set();
+  const seenTransferStarts = new Set();
   const uniqueConnecting = [];
-  if (uniqueDirect.length < 3) {
+  if (uniqueDirect.length < 2) {
     for (const p of connectingPlans.sort((a, b) => a.minutes - b.minutes)) {
       const r1 = String(p.legs[0].route.id);
       const r2 = String(p.legs[1].route.id);
       if (seenDirectRoutes.has(r1)) continue; // Don't transfer if starting route already had direct option
+      if (seenTransferStarts.has(r1)) continue; // Keep max 1 best transfer per first bus
       const pairKey = `${r1}-${r2}`;
       if (seenTransferPairs.has(pairKey)) continue;
       seenTransferPairs.add(pairKey);
+      seenTransferStarts.add(r1);
       uniqueConnecting.push(p);
       if (uniqueDirect.length + uniqueConnecting.length >= 4) break;
     }
@@ -202,9 +213,30 @@ export async function GET(request) {
     const transferCount = p.legs.length - 1;
 
     const legs = p.legs.map((leg, legIdx) => {
-      const fromIdx = leg.route.stops.indexOf(leg.from);
-      const toIdx = leg.route.stops.indexOf(leg.to);
-      const isReverse = fromIdx > toIdx;
+      const legPath = leg.route.stops.map(canonicalStop);
+      let fromIdx = -1;
+      let toIdx = -1;
+      const targetLen = (leg.stops?.length || 1) - 1;
+      for (let i = 0; i < legPath.length; i++) {
+        if (legPath[i] !== leg.from) continue;
+        if (targetLen >= 0) {
+          if (i + targetLen < legPath.length && legPath[i + targetLen] === leg.to) {
+            fromIdx = i;
+            toIdx = i + targetLen;
+            break;
+          }
+          if (i - targetLen >= 0 && legPath[i - targetLen] === leg.to) {
+            fromIdx = i;
+            toIdx = i - targetLen;
+            break;
+          }
+        }
+      }
+      if (fromIdx < 0 || toIdx < 0) {
+        fromIdx = legPath.indexOf(leg.from);
+        toIdx = legPath.indexOf(leg.to);
+      }
+      const isReverse = fromIdx >= 0 && toIdx >= 0 ? fromIdx > toIdx : false;
 
       // Directional title
       const dirTitle = getDirectionalTitle(leg.route.title, isReverse);
@@ -213,14 +245,14 @@ export async function GET(request) {
       const rId = String(leg.route.id);
       const rCode = String(leg.route.code || '');
       const rNum = cleanRouteId(rCode) || cleanRouteId(rId);
-      const travelDir = Math.sign(toIdx - fromIdx); // +1 forward, -1 reverse
+      const travelDir = Math.sign(toIdx - fromIdx) || 1; // +1 forward, -1 reverse
 
-      // Find all live buses mapped to this route via directedMatches, duty hints, or feed assignment
+      // Find all CONFIRMED live buses mapped to this route (exclude unconfirmed 'shared_corridor' ambiguity)
       const matchedBuses = activeBuses.filter(b => {
-        if (b.matches?.some(m => m.routeId === rId)) return true;
+        if (b.matches?.some(m => m.routeId === rId && m.basis !== 'shared_corridor')) return true;
         const bHint = dutyRouteHints[b.id] ? String(dutyRouteHints[b.id]) : '';
-        if (b.routeId === rId || b.routeId === rCode) return true;
         if (bHint && (bHint === rId || bHint === rNum)) return true;
+        if (b.routeId === rId || b.routeId === rCode) return true;
         if (b.assignment && (b.assignment === rId || b.assignment.includes(rId) || b.assignment.includes(rCode))) return true;
         if (b.route && (b.route.includes(rId) || b.route.includes(rCode))) return true;
         return false;
@@ -234,7 +266,7 @@ export async function GET(request) {
         // At night, ignore stationary/parked buses
         if (isNightWindow && (!b.speed || b.speed < 2)) continue;
 
-        const dirMatch = b.matches?.find(m => m.routeId === rId);
+        const dirMatch = b.matches?.find(m => m.routeId === rId && m.basis !== 'shared_corridor');
         // If motion tracking proved the bus is actively moving in the OPPOSITE direction, exclude it!
         if (dirMatch && dirMatch.direction !== 0 && dirMatch.direction !== travelDir) {
           continue;
@@ -244,14 +276,15 @@ export async function GET(request) {
         let closestIdx = -1;
         let minDist = Infinity;
 
-        // Find nearest stop along route
-        leg.route.stops.forEach((sId, idx) => {
-          const loc = stopLocations[sId];
+        // Find nearest stop along route (checking raw stop location or its canonical equivalent)
+        leg.route.stops.forEach((rawId, idx) => {
+          const canId = canonicalStop(rawId);
+          const loc = stopLocations[rawId] || stopLocations[canId];
           if (loc) {
             const d = getDistanceMeters(b.lat, b.lng, loc[0], loc[1]);
             if (d < minDist) {
               minDist = d;
-              closestStopId = sId;
+              closestStopId = canId;
               closestIdx = idx;
             }
           }
@@ -453,10 +486,13 @@ export async function GET(request) {
     };
   });
 
-  // Sort plans: live upcoming buses first, then fewest transfers, then shortest duration
+  // Sort plans: Direct routes FIRST, then live upcoming buses FIRST, then earliest departure & shortest duration
   enriched.sort((a, b) => {
-    if (a.hasLiveUpcomingBus !== b.hasLiveUpcomingBus) return a.hasLiveUpcomingBus ? -1 : 1;
     if (a.transferCount !== b.transferCount) return a.transferCount - b.transferCount;
+    if (a.hasLiveUpcomingBus !== b.hasLiveUpcomingBus) return a.hasLiveUpcomingBus ? -1 : 1;
+    if (a.hasLiveUpcomingBus && a.departureMinutes !== b.departureMinutes) {
+      return a.departureMinutes - b.departureMinutes;
+    }
     return a.totalMinutes - b.totalMinutes;
   });
 

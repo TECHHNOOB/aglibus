@@ -33,11 +33,14 @@ export default function HomePage() {
       setOrigin(savedFrom);
       setDestination(savedTo);
 
-      if (savedPlan) {
+      if (savedPlan && !urlFrom && !urlTo) {
         try {
           const parsed = JSON.parse(savedPlan);
-          if (parsed && parsed.plans) {
+          const ageMs = parsed?.fetchedAt ? Date.now() - parsed.fetchedAt : Infinity;
+          if (parsed && parsed.plans && ageMs < 120000) {
             setTripPlan(parsed);
+          } else if (savedFrom && savedTo && sessionStorage.getItem('aglibus_search_from')) {
+            executePlanTrip(savedFrom, savedTo);
           }
         } catch (e) {
           console.error('Failed to parse cached trip plan:', e);
@@ -70,8 +73,8 @@ export default function HomePage() {
         if (res.ok) {
           const data = await res.json();
           const buses = data.buses || [];
-          const active = buses.filter(b => b.gpsAt && (data.checkedAt - b.gpsAt <= 300000));
-          setActiveBusCount(active.length || buses.length);
+          const active = buses.filter(b => b.live);
+          setActiveBusCount(active.length);
 
           // Sort by moving buses first, then recent GPS
           const sorted = [...active].sort((a, b) => (b.speed || 0) - (a.speed || 0));
@@ -107,11 +110,16 @@ export default function HomePage() {
     }
 
     if (value.trim().length > 1) {
-      const q = value.toLowerCase();
-      const matched = allStops.filter(s =>
-        (s.name && s.name.toLowerCase().includes(q)) ||
-        (s.english && s.english.toLowerCase().includes(q))
-      ).slice(0, 6);
+      const q = value.toLowerCase().trim().replace(/partap/g, 'pratap');
+      const noSpaceQ = q.replace(/\s+/g, '');
+      const matched = allStops.filter(s => {
+        const hi = (s.name || '').toLowerCase();
+        const en = (s.english || '').toLowerCase();
+        const combined = `${hi} ${en}`.replace(/\s+/g, '');
+        if (hi.includes(q) || en.includes(q) || combined.includes(noSpaceQ)) return true;
+        if (q.includes('city') && (hi.includes('सिटी') || en.includes('udaipur railway'))) return true;
+        return false;
+      }).slice(0, 6);
       setSuggestions({ field, items: matched });
     } else {
       setSuggestions({ field: null, items: [] });
@@ -153,7 +161,7 @@ export default function HomePage() {
         if (typeof window !== 'undefined') {
           sessionStorage.setItem('aglibus_search_from', fromVal);
           sessionStorage.setItem('aglibus_search_to', toVal);
-          sessionStorage.setItem('aglibus_search_plan', JSON.stringify(data));
+          sessionStorage.setItem('aglibus_search_plan', JSON.stringify({ ...data, fetchedAt: Date.now() }));
           window.history.replaceState(null, '', `?from=${encodeURIComponent(fromVal)}&to=${encodeURIComponent(toVal)}`);
         }
       }
@@ -211,7 +219,15 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Stop Inputs */}
+          {/* Stop Inputs Form (supports Enter / Mobile Go key) */}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              setSuggestions({ field: null, items: [] });
+              handlePlanTrip();
+            }}
+            className="flex flex-col gap-3"
+          >
           <div className="relative flex flex-col gap-2">
             {/* Origin Input */}
             <div className="relative">
@@ -324,8 +340,7 @@ export default function HomePage() {
 
           {/* Action Button: Find Buses */}
           <button
-            type="button"
-            onClick={handlePlanTrip}
+            type="submit"
             disabled={isSearching}
             className="w-full h-12 bg-primary hover:bg-primary/95 text-on-primary font-bold rounded-xl shadow-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:opacity-50"
           >
@@ -336,6 +351,7 @@ export default function HomePage() {
               {isSearching ? t('searchingBuses') : t('searchBuses')}
             </span>
           </button>
+          </form>
 
           {/* Popular Stop Chips */}
           <div className="pt-2">

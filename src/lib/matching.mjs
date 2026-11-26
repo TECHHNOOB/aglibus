@@ -4,6 +4,22 @@ const clean = value => String(value).normalize("NFKC").trim().toLowerCase();
 const plain = value => clean(value).replace(/[^\p{L}\p{M}\p{N}]+/gu, "");
 const routeById = new Map(passengerRoutes.map(r => [r.id, r]));
 
+// Remember recent high-confidence route for a bus so brief shared-corridor sections preserve its identity
+const recentRouteByBus = globalThis.__aglibusRecentRouteByBus || (globalThis.__aglibusRecentRouteByBus = new Map());
+function rememberBusRoute(busId, routeId, time) {
+  if (!busId || !routeId) return;
+  recentRouteByBus.set(busId, { routeId, time });
+}
+function getRecentBusRoute(busId, now) {
+  const rec = recentRouteByBus.get(busId);
+  if (!rec) return null;
+  if (now - rec.time > 30 * 60 * 1000) {
+    recentRouteByBus.delete(busId);
+    return null;
+  }
+  return rec.routeId;
+}
+
 function sourceMatch(bus, route) {
   if (bus.agency !== "Unknown" && route.agency !== bus.agency) return false;
   const assignment = plain(bus.assignment);
@@ -83,13 +99,37 @@ function corridorMatches(bus) {
   return candidates;
 }
 
-function matchBasis(bus, route) {
-  if (sourceMatch(bus, route)) return "feed";
-  if (inferredDuty(bus, route)) return "duty_hint_and_gps";
+function matchBasis(bus, route, now = Date.now()) {
+  if (sourceMatch(bus, route)) {
+    rememberBusRoute(bus.id, route.id, now);
+    return "feed";
+  }
+  if (inferredDuty(bus, route)) {
+    rememberBusRoute(bus.id, route.id, now);
+    return "duty_hint_and_gps";
+  }
   const hint = routeById.get(dutyRouteHints[bus.id]);
   if (hint && hint.id !== route.id && inferredDuty(bus, hint)) return null;
+
   const matches = corridorMatches(bus);
-  if (matches.some(m => m.routeId === route.id)) return matches.length === 1 ? "gps_estimate" : "shared_corridor";
+  // If bus has a duty hint on one of the overlapping corridor segments, trust its duty hint
+  if (hint && matches.some(m => m.routeId === hint.id)) {
+    rememberBusRoute(bus.id, hint.id, now);
+    return route.id === hint.id ? "duty_hint_and_gps" : null;
+  }
+  if (matches.length > 1) {
+    const previous = getRecentBusRoute(bus.id, now);
+    if (previous && matches.some(m => m.routeId === previous)) {
+      return route.id === previous ? "recent_history_and_gps" : null;
+    }
+  }
+  if (matches.some(m => m.routeId === route.id)) {
+    if (matches.length === 1) {
+      rememberBusRoute(bus.id, route.id, now);
+      return "gps_estimate";
+    }
+    return "shared_corridor";
+  }
   return null;
 }
 
@@ -105,7 +145,7 @@ function directedMatches(bus, checkedAt = Date.now()) {
   const next = new Map();
 
   for (const route of passengerRoutes) {
-    const basis = matchBasis(bus, route);
+    const basis = matchBasis(bus, route, checkedAt);
     if (!basis) continue;
     const match = { routeId: route.id, basis, direction: 0 };
     matches.push(match);
@@ -147,6 +187,7 @@ function boardingMatch(bus, routeId, fromIndex, toIndex, now = Date.now()) {
   const direction = Math.sign(toIndex - fromIndex);
   return bus.matches?.find(m =>
     m.routeId === routeId &&
+    m.basis !== "shared_corridor" &&
     (m.direction === direction || m.direction === 0) &&
     Number.isFinite(m.progress) &&
     (m.progress - fromIndex) * direction <= 0

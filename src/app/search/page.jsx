@@ -65,7 +65,7 @@ function SearchResultsContent() {
           if (typeof window !== 'undefined') {
             sessionStorage.setItem('aglibus_search_from', fromVal);
             sessionStorage.setItem('aglibus_search_to', toVal);
-            sessionStorage.setItem('aglibus_search_plan', JSON.stringify(data));
+            sessionStorage.setItem('aglibus_search_plan', JSON.stringify({ ...data, fetchedAt: Date.now() }));
           }
         }
       } catch (err) {
@@ -128,11 +128,16 @@ function SearchResultsContent() {
     else setDestination(value);
 
     if (value.trim().length > 1) {
-      const q = value.toLowerCase();
-      const matched = allStops.filter(s =>
-        (s.name && s.name.toLowerCase().includes(q)) ||
-        (s.english && s.english.toLowerCase().includes(q))
-      ).slice(0, 6);
+      const q = value.toLowerCase().trim().replace(/partap/g, 'pratap');
+      const noSpaceQ = q.replace(/\s+/g, '');
+      const matched = allStops.filter(s => {
+        const hi = (s.name || '').toLowerCase();
+        const en = (s.english || '').toLowerCase();
+        const combined = `${hi} ${en}`.replace(/\s+/g, '');
+        if (hi.includes(q) || en.includes(q) || combined.includes(noSpaceQ)) return true;
+        if (q.includes('city') && (hi.includes('सिटी') || en.includes('udaipur railway'))) return true;
+        return false;
+      }).slice(0, 6);
       setSuggestions({ field, items: matched });
     } else {
       setSuggestions({ field: null, items: [] });
@@ -494,8 +499,9 @@ function SearchResultsContent() {
             const totalMin = opt.totalMinutes || opt.minutes || 15;
             const isDirect = (opt.transferCount != null ? opt.transferCount : opt.legs.length - 1) === 0;
             const primaryLeg = opt.legs[0];
+            const secondLeg = opt.legs[1] || null;
             const primaryRouteId = primaryLeg?.routeId || primaryLeg?.id || '4';
-            const routeCode = primaryLeg?.routeCode || primaryLeg?.code || `Route ${primaryRouteId}`;
+            const routeCode = opt.legs.map(l => l.routeCode || l.code || `Route ${l.routeId || l.id}`).join(' ➔ ');
             const isFastest = i === 0;
             const isElectric = opt.legs.some(l => /pm|electric|e-bus/i.test(l.agency || l.code || ''));
             const isAlarmSet = alarms.has(i);
@@ -512,51 +518,57 @@ function SearchResultsContent() {
             const hasUpcomingBus = allUpcomingBuses.length > 0;
             const recentlyDepartedBus = primaryLeg?.departedBuses?.[0] || null;
             const isServiceClosed = Boolean(opt.isServiceClosed || tripPlan?.isServiceClosed);
+            const dirLabel = lang === 'en'
+              ? (primaryLeg?.directionLabelEn || `Towards ${destination}`)
+              : (primaryLeg?.directionLabel || `${destination} की ओर`);
 
             return (
               <article
                 key={i}
-                className="bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant/30 p-4 relative overflow-hidden flex flex-col gap-3.5 hover:border-primary/40 transition-colors"
+                className={`bg-surface-container-lowest rounded-2xl shadow-sm border p-4 relative overflow-hidden flex flex-col gap-3 transition-colors ${
+                  hasUpcomingBus
+                    ? 'border-secondary/40 hover:border-secondary'
+                    : 'border-outline-variant/30 hover:border-primary/40'
+                }`}
               >
                 {/* Top Badges & Alarm Bar */}
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-1.5 flex-wrap">
                     <span className="bg-primary text-on-primary font-bold text-xs px-2.5 py-1 rounded-lg tracking-wide shadow-2xs">
                       {routeCode}
-                    </span>
-                    <span className="text-xs font-semibold text-on-surface-variant">
-                      {primaryLeg?.agency || 'PM e-Bus'}
                     </span>
 
                     {/* Highlights: LIVE GPS vs ESTIMATED */}
                     {hasUpcomingBus ? (
                       <span className="bg-secondary-fixed text-on-secondary-fixed text-[10.5px] px-2 py-0.5 rounded-full flex items-center gap-1 font-extrabold">
                         <span className="w-1.5 h-1.5 rounded-full bg-secondary animate-ping" />
-                        {lang === 'hi' ? 'Live GPS' : 'Live GPS'}
+                        <span>Live GPS</span>
+                      </span>
+                    ) : opt.scheduleSource === 'gtfs' ? (
+                      <span className="bg-primary-fixed text-on-primary-fixed text-[10.5px] px-2 py-0.5 rounded-full flex items-center gap-1 font-extrabold">
+                        <span className="material-symbols-outlined text-[12px]">event_note</span>
+                        <span>GTFS Estimated</span>
                       </span>
                     ) : (
                       <span className="bg-surface-container-high text-on-surface-variant text-[10.5px] px-2 py-0.5 rounded-full flex items-center gap-1 font-extrabold border border-outline-variant/40">
                         <span className="material-symbols-outlined text-[12px]">schedule</span>
-                        {lang === 'hi' ? 'Estimated (अनुमानित)' : 'Estimated'}
+                        <span>{lang === 'hi' ? 'Estimated' : 'Estimated'}</span>
+                      </span>
+                    )}
+
+                    {isDirect ? (
+                      <span className="bg-secondary-container/40 text-on-secondary-container text-[10.5px] px-2 py-0.5 rounded-full font-bold">
+                        {lang === 'hi' ? 'सीधी बस' : 'Direct'}
+                      </span>
+                    ) : (
+                      <span className="bg-tertiary-container/40 text-on-tertiary-container text-[10.5px] px-2 py-0.5 rounded-full font-bold">
+                        {lang === 'hi' ? '1 ट्रांसफर' : '1 Transfer'}
                       </span>
                     )}
 
                     {isFastest && (
                       <span className="bg-primary-fixed text-on-primary-fixed text-[10.5px] px-2 py-0.5 rounded-full font-bold">
-                        {lang === 'hi' ? 'सबसे तेज' : 'FASTEST'}
-                      </span>
-                    )}
-
-                    {isElectric && !isFastest && (
-                      <span className="bg-secondary-container text-on-secondary-container text-[10.5px] px-2 py-0.5 rounded-full flex items-center gap-1 font-bold">
-                        <span className="material-symbols-outlined text-[13px]">bolt</span>
-                        {lang === 'hi' ? 'स्मार्ट ई-बस' : 'Smart E-Bus'}
-                      </span>
-                    )}
-
-                    {!isDirect && (
-                      <span className="bg-surface-container text-primary text-[10.5px] px-2 py-0.5 rounded-full font-bold">
-                        {lang === 'hi' ? '1 ट्रांसफर' : '1 Transfer'}
+                        {lang === 'hi' ? 'सबसे बेहतर' : 'BEST'}
                       </span>
                     )}
                   </div>
@@ -566,7 +578,7 @@ function SearchResultsContent() {
                     type="button"
                     aria-label="Set Stop Arrival Alarm"
                     onClick={() => toggleAlarm(i, routeCode)}
-                    className={`w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90 ${
+                    className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all active:scale-90 ${
                       isAlarmSet
                         ? 'bg-primary text-on-primary shadow-xs'
                         : 'bg-surface-container text-on-surface-variant hover:text-primary'
@@ -579,27 +591,147 @@ function SearchResultsContent() {
                   </button>
                 </div>
 
+                {/* FIRST THING USER READS: Instant Next Bus / Arrival Answer */}
+                <div className={`rounded-xl p-3 flex flex-col gap-2 border ${
+                  hasUpcomingBus
+                    ? 'bg-secondary-container/25 border-secondary-container/50'
+                    : isServiceClosed
+                    ? 'bg-error-container/20 border-error/25'
+                    : 'bg-surface-container-low border-outline-variant/30'
+                }`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
+                        hasUpcomingBus ? 'bg-secondary animate-pulse' : isServiceClosed ? 'bg-error' : 'bg-outline'
+                      }`} />
+                      <div className="min-w-0">
+                        {hasUpcomingBus ? (
+                          <>
+                            <p className="text-xs sm:text-[13px] font-extrabold text-on-surface flex items-center gap-1.5 flex-wrap">
+                              <span className="text-secondary">
+                                {lang === 'hi' ? 'अगली बस:' : 'Next Bus:'}
+                              </span>
+                              <span>{nextUpcomingBus.plate}</span>
+                              <span className="px-1.5 py-0.2 rounded bg-secondary text-on-secondary text-[10px] font-black">
+                                {nextUpcomingBus.isAtStop
+                                  ? (lang === 'hi' ? 'यहीं है!' : 'Here!')
+                                  : `~${nextUpcomingBus.etaMinutes} ${t('minutes')}`}
+                              </span>
+                              <span className="text-[10.5px] font-semibold text-on-surface-variant">
+                                ({nextUpcomingBus.speed > 0 ? `${nextUpcomingBus.speed} km/h` : (lang === 'hi' ? 'स्टॉप पर' : 'Halt')})
+                              </span>
+                            </p>
+                            <p className="text-[11px] text-secondary font-bold truncate mt-0.5">
+                              📍 {nextUpcomingBus.isAtStop
+                                ? (lang === 'hi' ? 'अभी आपके बोर्डिंग स्टॉप पर है' : 'At your boarding stop right now')
+                                : `${nextUpcomingBus.stopsAway} ${lang === 'hi' ? 'स्टॉप दूर' : 'stops away'} (${nextUpcomingBus.nearStop.name || nextUpcomingBus.nearStop.english}) • 🎯 ${dirLabel}`}
+                            </p>
+                          </>
+                        ) : isServiceClosed ? (
+                          <>
+                            <p className="text-xs font-extrabold text-error truncate">
+                              {lang === 'hi' ? '🌙 रात्रि में बस सेवा बंद है' : '🌙 Night Service Closed'}
+                            </p>
+                            <p className="text-[10.5px] text-on-surface-variant font-medium truncate mt-0.5">
+                              {lang === 'hi'
+                                ? `रात 9:30 से सुबह 6:30 तक बंद • पहली बस ${times.dep.time} ${times.dep.ampm}`
+                                : `Closed 9:30 PM – 6:30 AM • First morning bus ${times.dep.time} ${times.dep.ampm}`}
+                            </p>
+                          </>
+                        ) : opt.scheduleSource === 'gtfs' && opt.nextScheduledTimes?.length > 0 ? (
+                          <>
+                            <p className="text-xs font-extrabold text-on-surface truncate flex items-center gap-1.5">
+                              <span className="text-primary">
+                                {lang === 'hi' ? `📅 अगली बस (${opt.nextScheduledTimes[0]})` : `📅 Next Bus (${opt.nextScheduledTimes[0]})`}
+                              </span>
+                              <span className="text-[10px] text-on-surface-variant font-semibold">• Estimated</span>
+                            </p>
+                            <p className="text-[10.5px] text-on-surface-variant font-medium truncate mt-0.5">
+                              {lang === 'hi' ? 'लाइव GPS नहीं • समय सारणी:' : 'No live GPS • Times:'} {opt.nextScheduledTimes.join(' • ')}
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-xs font-extrabold text-on-surface truncate flex items-center gap-1.5">
+                              <span>
+                                {lang === 'hi' ? `🕒 अगली अनुमानित बस ~${times.dep.time} ${times.dep.ampm}` : `🕒 Next Estimated ~${times.dep.time} ${times.dep.ampm}`}
+                              </span>
+                            </p>
+                            <p className="text-[10.5px] text-on-surface-variant font-medium truncate mt-0.5">
+                              {lang === 'hi' ? `लाइव GPS उपलब्ध नहीं • हर ${primaryLeg?.headway || '15-20'} मिनट में • 🎯 ${dirLabel}` : `No live GPS • Every ${primaryLeg?.headway || '15-20'} mins • 🎯 ${dirLabel}`}
+                              {recentlyDepartedBus && (
+                                <span className="text-outline ml-1.5 font-normal">
+                                  ({lang === 'hi' ? `पिछली बस निकल चुकी` : `Past bus left`})
+                                </span>
+                              )}
+                            </p>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* All Upcoming Buses on this Route in User's Direction */}
+                  {hasUpcomingBus && allUpcomingBuses.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-1.5 pt-1.5 border-t border-secondary-container/30">
+                      <span className="text-[10px] font-bold text-secondary uppercase mr-0.5">
+                        {lang === 'hi' ? `आने वाली (${allUpcomingBuses.length}):` : `Incoming (${allUpcomingBuses.length}):`}
+                      </span>
+                      {allUpcomingBuses.map((bus) => (
+                        <Link
+                          key={bus.id}
+                          href={`/track?route=${primaryRouteId}&bus=${bus.id}&dir=${primaryLeg?.isReverse ? 'reverse' : 'forward'}&from=${primaryLeg?.fromStop?.id ?? ''}&to=${primaryLeg?.toStop?.id ?? ''}`}
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-surface-container-lowest hover:bg-primary hover:text-on-primary border border-outline-variant/40 text-on-surface font-bold text-[10.5px] transition-all shadow-2xs group"
+                        >
+                          <span className="material-symbols-outlined text-[13px] text-primary group-hover:text-on-primary">directions_bus</span>
+                          <span>{bus.plate}</span>
+                          <span className="px-1 py-0.2 rounded bg-secondary-fixed text-on-secondary-fixed text-[9.5px] font-extrabold">
+                            {bus.isAtStop ? (lang === 'hi' ? 'यहीं' : 'Here') : `~${bus.etaMinutes}m`}
+                          </span>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Clear 1-Transfer Instruction if route requires bus change */}
+                {!isDirect && secondLeg && (
+                  <div className="px-3 py-2 rounded-xl bg-tertiary-container/20 border border-tertiary/20 flex items-center justify-between gap-2 text-xs">
+                    <div className="flex items-center gap-1.5 min-w-0 font-bold text-on-surface">
+                      <span className="material-symbols-outlined text-[16px] text-tertiary shrink-0">transfer_within_a_station</span>
+                      <span className="truncate">
+                        {lang === 'hi'
+                          ? `${getStopDisplayName(primaryLeg.toStop || primaryLeg.to)} पर बदलें: ${primaryLeg.routeCode} ➔ ${secondLeg.routeCode}`
+                          : `Change at ${getStopDisplayName(primaryLeg.toStop || primaryLeg.to)}: ${primaryLeg.routeCode} ➔ ${secondLeg.routeCode}`}
+                      </span>
+                    </div>
+                    <span className="text-[10.5px] font-bold text-tertiary shrink-0">
+                      {secondLeg.stopsCount} stops
+                    </span>
+                  </div>
+                )}
+
                 {/* Schedule Matrix (Where Is My Train bold readable timing) */}
-                <div className="grid grid-cols-3 items-center py-1">
+                <div className="grid grid-cols-3 items-center py-0.5">
                   {/* Departure */}
                   <div className="flex flex-col">
-                    <span className="text-[26px] font-black text-on-surface tracking-tight leading-none">
+                    <span className="text-[24px] font-black text-on-surface tracking-tight leading-none">
                       {times.dep.time}
                     </span>
                     <span className="text-[11px] font-bold text-secondary mt-1">
-                      {times.dep.ampm} • Stand {primaryRouteId}
+                      {times.dep.ampm} • {primaryLeg?.agency || 'City Bus'}
                     </span>
                     <span className="text-[11px] text-on-surface-variant font-medium truncate mt-0.5">
-                      {origin}
+                      {getStopDisplayName(primaryLeg?.fromStop || origin)}
                     </span>
                   </div>
 
                   {/* Journey Duration & Graphical Divider */}
                   <div className="flex flex-col items-center justify-center px-1">
                     <span className="text-[11px] font-bold text-on-surface-variant">
-                      {totalMin} mins
+                      ~{totalMin} {t('minutes')}
                     </span>
-                    <div className="w-full flex items-center my-1.5">
+                    <div className="w-full flex items-center my-1">
                       <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0" />
                       <div className="flex-1 h-0.5 bg-primary-fixed-dim relative flex items-center justify-center">
                         <span className="material-symbols-outlined text-primary text-[14px] absolute bg-surface-container-lowest px-0.5">
@@ -615,120 +747,16 @@ function SearchResultsContent() {
 
                   {/* Arrival */}
                   <div className="flex flex-col items-end text-right">
-                    <span className="text-[26px] font-black text-on-surface tracking-tight leading-none">
+                    <span className="text-[24px] font-black text-on-surface tracking-tight leading-none">
                       {times.arr.time}
                     </span>
                     <span className="text-[11px] font-bold text-on-surface mt-1">
-                      {times.arr.ampm}
+                      {times.arr.ampm} • ₹10–₹20
                     </span>
                     <span className="text-[11px] text-on-surface-variant font-medium truncate mt-0.5">
-                      {destination}
+                      {getStopDisplayName(opt.legs[opt.legs.length - 1]?.toStop || destination)}
                     </span>
                   </div>
-                </div>
-
-                {/* Live Telemetry Status Banner (Only shows genuinely UPCOMING buses) */}
-                <div className={`rounded-xl p-2.5 flex flex-col gap-2 border ${
-                  hasUpcomingBus
-                    ? 'bg-secondary-container/25 border-secondary-container/40'
-                    : isServiceClosed
-                    ? 'bg-error-container/20 border-error/20'
-                    : 'bg-surface-container-low border-outline-variant/30'
-                }`}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
-                        hasUpcomingBus ? 'bg-secondary animate-pulse' : isServiceClosed ? 'bg-error' : 'bg-outline'
-                      }`} />
-                      <div className="truncate">
-                        {hasUpcomingBus ? (
-                          <>
-                            <p className="text-xs font-bold text-on-secondary-container truncate flex items-center gap-1.5">
-                              <span className="text-secondary font-black">
-                                {lang === 'hi' ? `आने वाली बस (${allUpcomingBuses.length}):` : `Upcoming (${allUpcomingBuses.length}):`}
-                              </span>
-                              <span>{nextUpcomingBus.plate}</span>
-                              <span className="px-1.5 py-0.2 rounded bg-secondary-fixed text-on-secondary-fixed text-[10px] font-bold">
-                                {nextUpcomingBus.speed > 0 ? `${nextUpcomingBus.speed} km/h` : (lang === 'hi' ? 'स्टॉप' : 'Halt')}
-                              </span>
-                            </p>
-                            <p className="text-[10.5px] text-secondary font-bold truncate mt-0.5">
-                              📍 {nextUpcomingBus.isAtStop
-                                ? (lang === 'hi' ? 'अभी आपके स्टॉप पर है (At Stop Now)' : 'At your stop now')
-                                : `${nextUpcomingBus.stopsAway} ${lang === 'hi' ? 'स्टॉप दूर' : 'stops away'} (${nextUpcomingBus.nearStop.name || nextUpcomingBus.nearStop.english}) • ~${nextUpcomingBus.etaMinutes} ${t('minutes')}`}
-                            </p>
-                          </>
-                        ) : isServiceClosed ? (
-                          <>
-                            <p className="text-xs font-bold text-error truncate">
-                              {lang === 'hi' ? '🌙 रात्रि में बस सेवा बंद है' : '🌙 Night Service Closed'}
-                            </p>
-                            <p className="text-[10.5px] text-on-surface-variant font-medium truncate mt-0.5">
-                              {lang === 'hi'
-                                ? `रात 9:30 से सुबह 6:30 तक सेवा बंद • पहली बस ${times.dep.time} ${times.dep.ampm}`
-                                : `Closed 9:30 PM – 6:30 AM • Next morning bus ${times.dep.time} ${times.dep.ampm}`}
-                            </p>
-                          </>
-                        ) : opt.scheduleSource === 'gtfs' && opt.nextScheduledTimes?.length > 0 ? (
-                          <>
-                            <p className="text-xs font-bold text-on-surface truncate flex items-center gap-1.5">
-                              <span className="px-1.5 py-0.2 rounded bg-surface-container-high text-on-surface-variant text-[10px] font-extrabold">
-                                Estimated
-                              </span>
-                              <span className="text-primary font-black">
-                                {lang === 'hi' ? `GTFS समय: ${opt.nextScheduledTimes[0]}` : `GTFS Time: ${opt.nextScheduledTimes[0]}`}
-                              </span>
-                            </p>
-                            <p className="text-[10.5px] text-on-surface-variant font-medium truncate mt-0.5">
-                              {lang === 'hi' ? 'लाइव GPS उपलब्ध नहीं • आगामी:' : 'No live GPS • Upcoming:'} {opt.nextScheduledTimes.join(' • ')}
-                            </p>
-                          </>
-                        ) : (
-                          <>
-                            <p className="text-xs font-bold text-on-surface truncate flex items-center gap-1.5">
-                              <span className="px-1.5 py-0.2 rounded bg-surface-container-high text-on-surface-variant text-[10px] font-extrabold">
-                                Estimated
-                              </span>
-                              <span>
-                                {lang === 'hi' ? 'अनुमानित समय (डेटाबेस के अनुसार)' : 'Estimated Time (From Database)'}
-                              </span>
-                            </p>
-                            <p className="text-[10.5px] text-on-surface-variant font-medium truncate mt-0.5">
-                              {lang === 'hi' ? `लाइव GPS उपलब्ध नहीं • हर ${primaryLeg?.headway || '15-20'} मिनट में सेवा` : `No live GPS • Every ${primaryLeg?.headway || '15-20'} mins`}
-                              {recentlyDepartedBus && (
-                                <span className="text-outline ml-1.5 font-normal">
-                                  ({lang === 'hi' ? `पिछली बस निकल चुकी है` : `Past bus departed`})
-                                </span>
-                              )}
-                            </p>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                    <div className="text-right flex-shrink-0 pl-2">
-                      <span className="text-sm font-black text-on-surface">₹10 - ₹20</span>
-                      <span className="block text-[10px] text-secondary font-bold">Pass / UPI</span>
-                    </div>
-                  </div>
-
-                  {/* All Upcoming Buses on this Route in User's Direction */}
-                  {hasUpcomingBus && allUpcomingBuses.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 pt-1 border-t border-secondary-container/30">
-                      {allUpcomingBuses.map((bus) => (
-                        <Link
-                          key={bus.id}
-                          href={`/track?route=${primaryRouteId}&bus=${bus.id}&dir=${primaryLeg?.isReverse ? 'reverse' : 'forward'}&from=${primaryLeg?.fromStop?.id ?? ''}&to=${primaryLeg?.toStop?.id ?? ''}`}
-                          className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-surface-container-lowest hover:bg-primary hover:text-on-primary border border-outline-variant/40 text-on-surface font-bold text-[10.5px] transition-all shadow-2xs group"
-                        >
-                          <span className="material-symbols-outlined text-[13px] text-primary group-hover:text-on-primary">directions_bus</span>
-                          <span>{bus.plate}</span>
-                          <span className="px-1 py-0.2 rounded bg-secondary-fixed text-on-secondary-fixed text-[9.5px] font-extrabold">
-                            {bus.isAtStop ? (lang === 'hi' ? 'यहीं है' : 'Here') : `~${bus.etaMinutes}m`}
-                          </span>
-                        </Link>
-                      ))}
-                    </div>
-                  )}
                 </div>
 
                 {/* Action Buttons: Big Live Track CTA + Stops Accordion Toggle */}
@@ -758,42 +786,48 @@ function SearchResultsContent() {
                   </button>
                 </div>
 
-                {/* Stops Sequence Accordion (Expandable) */}
+                {/* Stops Sequence Accordion (Expandable - shows all legs if 1 Transfer) */}
                 {isStopsExpanded && (
-                  <div className="mt-2 pt-3 border-t border-outline-variant/30 flex flex-col gap-2 animate-fadeIn">
-                    <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
-                      {lang === 'hi' ? 'रूट के सभी स्टॉप्स (Stop Sequence)' : 'Route Stop Sequence'}
-                    </span>
-                    <div className="flex flex-col pl-2 border-l-2 border-primary/30 ml-2 py-1 gap-2.5">
-                      {primaryLeg.stopSequence && primaryLeg.stopSequence.length > 0 ? (
-                        primaryLeg.stopSequence.map((s, sIdx) => {
-                          const isStart = sIdx === 0;
-                          const isEnd = sIdx === primaryLeg.stopSequence.length - 1;
-                          return (
-                            <div key={s.id || sIdx} className="flex items-center gap-2 text-xs">
-                              <span
-                                className={`w-2 h-2 rounded-full flex-shrink-0 -ml-[13px] ${
-                                  isStart
-                                    ? 'bg-secondary ring-4 ring-secondary-fixed/40'
-                                    : isEnd
-                                    ? 'bg-tertiary ring-4 ring-tertiary-fixed/40'
-                                    : 'bg-primary'
-                                }`}
-                              />
-                              <span className={`font-semibold ${isStart || isEnd ? 'text-on-surface font-bold' : 'text-on-surface-variant'}`}>
-                                {lang === 'hi' ? (s.name || s.english) : (s.english || s.name)}
-                              </span>
-                              {isStart && <span className="text-[10px] font-bold text-secondary uppercase">(Boarding)</span>}
-                              {isEnd && <span className="text-[10px] font-bold text-tertiary uppercase">(Destination)</span>}
+                  <div className="mt-2 pt-3 border-t border-outline-variant/30 flex flex-col gap-3 animate-fadeIn">
+                    {opt.legs.map((legItem, lIdx) => (
+                      <div key={lIdx} className="flex flex-col gap-2">
+                        <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
+                          {opt.legs.length > 1
+                            ? `${legItem.routeCode} (${legItem.from} ➔ ${legItem.to})`
+                            : (lang === 'hi' ? 'रूट के सभी स्टॉप्स (Stop Sequence)' : 'Route Stop Sequence')}
+                        </span>
+                        <div className="flex flex-col pl-2 border-l-2 border-primary/30 ml-2 py-1 gap-2">
+                          {legItem.stopSequence && legItem.stopSequence.length > 0 ? (
+                            legItem.stopSequence.map((s, sIdx) => {
+                              const isStart = sIdx === 0;
+                              const isEnd = sIdx === legItem.stopSequence.length - 1;
+                              return (
+                                <div key={`${lIdx}-${s.id || sIdx}`} className="flex items-center gap-2 text-xs">
+                                  <span
+                                    className={`w-2 h-2 rounded-full flex-shrink-0 -ml-[13px] ${
+                                      isStart
+                                        ? 'bg-secondary ring-4 ring-secondary-fixed/40'
+                                        : isEnd
+                                        ? 'bg-tertiary ring-4 ring-tertiary-fixed/40'
+                                        : 'bg-primary'
+                                    }`}
+                                  />
+                                  <span className={`font-semibold ${isStart || isEnd ? 'text-on-surface font-bold' : 'text-on-surface-variant'}`}>
+                                    {lang === 'hi' ? (s.name || s.english) : (s.english || s.name)}
+                                  </span>
+                                  {isStart && <span className="text-[10px] font-bold text-secondary uppercase">(Board)</span>}
+                                  {isEnd && <span className="text-[10px] font-bold text-tertiary uppercase">({lIdx === 0 && opt.legs.length > 1 ? 'Transfer' : 'Destination'})</span>}
+                                </div>
+                              );
+                            })
+                          ) : (
+                            <div className="text-xs text-on-surface-variant">
+                              {legItem.from} ➔ {legItem.to}
                             </div>
-                          );
-                        })
-                      ) : (
-                        <div className="text-xs text-on-surface-variant">
-                          {origin} ➔ {destination} ({stopsCount} stops)
+                          )}
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </article>

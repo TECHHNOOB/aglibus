@@ -9,6 +9,7 @@ export default function TimetablePage() {
 
   const [routes, setRoutes] = useState([]);
   const [stops, setStops] = useState([]);
+  const [timetableMeta, setTimetableMeta] = useState([]);
   const [selectedRouteId, setSelectedRouteId] = useState('4');
   const [direction, setDirection] = useState('up'); // up (forward), down (reverse)
   const [activeShift, setActiveShift] = useState('all'); // all, morning, afternoon, evening
@@ -19,18 +20,28 @@ export default function TimetablePage() {
   useEffect(() => {
     async function loadData() {
       try {
-        const [routesRes, stopsRes] = await Promise.all([
+        const [routesRes, stopsRes, ttRes] = await Promise.all([
           fetch('/api/routes'),
-          fetch('/api/stops')
+          fetch('/api/stops'),
+          fetch('/api/timetable')
         ]);
         if (routesRes.ok) setRoutes(await routesRes.json());
         if (stopsRes.ok) setStops(await stopsRes.json());
+        if (ttRes.ok) {
+          const tt = await ttRes.json();
+          setTimetableMeta(tt.estimates || []);
+        }
       } catch (err) {
         console.error('Failed to load timetable data:', err);
       }
     }
     loadData();
   }, []);
+
+  const activeGtfs = useMemo(() => {
+    const match = timetableMeta.find(m => m.routeId === selectedRouteId);
+    return match?.gtfs || null;
+  }, [timetableMeta, selectedRouteId]);
 
   const activeRoute = useMemo(() => {
     return routes.find(r => r.id === selectedRouteId) || routes[0] || {
@@ -200,6 +211,33 @@ export default function TimetablePage() {
               <span className="text-xs font-extrabold text-secondary">{t('everyXMin', { X: activeRoute.headway || 20 })}</span>
             </div>
           </div>
+
+          {/* Official GTFS Schedule Summary vs Estimated Banner */}
+          {activeGtfs ? (
+            <div className="rounded-xl bg-primary-fixed/40 border border-primary/20 p-2.5 flex flex-col gap-1.5">
+              <div className="flex items-center justify-between text-xs font-extrabold text-primary">
+                <span className="flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[15px]">verified</span>
+                  <span>{lang === 'hi' ? 'आधिकारिक GTFS समय-सारणी' : 'Official GTFS Schedule'}</span>
+                </span>
+                <span>{activeGtfs.firstBus} – {activeGtfs.lastBus} ({activeGtfs.totalDailyTrips} trips)</span>
+              </div>
+              {activeGtfs.upcomingOriginDepartures?.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 pt-0.5">
+                  {activeGtfs.upcomingOriginDepartures.slice(0, 4).map((dep, idx) => (
+                    <span key={idx} className="px-2 py-0.5 rounded-md bg-surface-container-lowest text-[10.5px] font-bold text-on-surface border border-outline-variant/30">
+                      {dep.time} • {dep.title}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="rounded-xl bg-surface-container-low border border-outline-variant/30 px-3 py-2 flex items-center justify-between text-[11px] text-on-surface-variant font-semibold">
+              <span>{lang === 'hi' ? '🕒 अनुमानित समय-सारणी (डेटाबेस फ्रीक्वेंसी के अनुसार)' : '🕒 Estimated Timetable (Based on Route Frequency)'}</span>
+              <span className="px-1.5 py-0.5 rounded bg-surface-container-high font-extrabold text-[10px]">Estimated</span>
+            </div>
+          )}
         </div>
       </section>
 
@@ -458,7 +496,7 @@ export default function TimetablePage() {
                   </button>
 
                   <Link
-                    href={`/track?route=${activeRoute.id}`}
+                    href={`/track?route=${activeRoute.id}&dir=${direction === 'down' ? 'reverse' : 'forward'}`}
                     className="px-2.5 py-1 rounded-lg bg-surface-container text-primary font-bold text-xs flex items-center gap-1 hover:bg-primary hover:text-on-primary transition-colors"
                   >
                     <span className="material-symbols-outlined text-[15px]">radar</span>
