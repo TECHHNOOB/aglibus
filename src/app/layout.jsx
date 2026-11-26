@@ -4,7 +4,7 @@ import BottomNav from '@/components/BottomNav';
 import { LanguageProvider } from '@/components/LanguageContext';
 
 export const metadata = {
-  title: 'AgliBus • Udaipur City Bus Tracker',
+  title: 'Udaipur City Bus Tracker',
   description: 'Live GPS bus tracking, route planning, timetable, and nearby radar for Udaipur City Transit & PM e-Bus.',
   icons: {
     icon: '/favicon.png',
