@@ -353,6 +353,7 @@ export async function GET(request) {
         directionLabel: `${toStopName} की ओर`,
         directionLabelEn: `Towards ${toStopEng}`,
         agency: leg.route.agency,
+        headway: leg.route.headway || '15-20',
         minutes: leg.minutes,
         from: stopNames[leg.from] || `Stop #${leg.from}`,
         to: toStopName,
@@ -421,12 +422,17 @@ export async function GET(request) {
       depDate = new Date(now.getTime() + minsUntilMorning * 60000);
       arrDate = new Date(depDate.getTime() + totalMinutes * 60000);
     } else {
-      departureMinutes = 8 + planIdx * 10;
+      // Align next estimated departure to the route's database headway from 06:30 AM IST
+      const headwayMin = parseInt(String(primaryLeg?.headway || '15'), 10) || 15;
+      const minsSinceStart = Math.max(0, istMinutesOfDay - (6 * 60 + 30));
+      const rem = minsSinceStart % headwayMin;
+      departureMinutes = rem === 0 ? headwayMin : (headwayMin - rem) + (planIdx > 0 ? 3 : 0);
       depDate = new Date(now.getTime() + departureMinutes * 60000);
       arrDate = new Date(depDate.getTime() + totalMinutes * 60000);
     }
 
     const nextScheduledTimes = gtfsDeps.slice(0, 3).map(d => formatClockIST(new Date(d.start)).full);
+    const dataStatus = hasLiveBus ? 'live' : 'estimated';
 
     return {
       totalMinutes,
@@ -436,6 +442,8 @@ export async function GET(request) {
       departureTime: formatClockIST(depDate),
       arrivalTime: formatClockIST(arrDate),
       scheduleSource,
+      dataStatus,
+      isEstimated: !hasLiveBus,
       nextScheduledTimes,
       gtfsSummary,
       isServiceClosed,

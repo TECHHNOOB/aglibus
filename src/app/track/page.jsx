@@ -432,20 +432,25 @@ function LiveTrackerContent() {
       {/* Status Banner when No Live Buses are currently on this route */}
       {matchingBuses.length === 0 && !isLoading && (
         <section className="px-4 py-3">
-          <div className="bg-surface-container-low border border-outline-variant/30 rounded-2xl p-3.5 flex items-center gap-3 shadow-2xs">
-            <span className="w-10 h-10 rounded-xl bg-surface-container-high text-primary flex items-center justify-center shrink-0">
-              <span className="material-symbols-outlined text-[22px]">schedule</span>
-            </span>
-            <div className="flex flex-col min-w-0">
-              <span className="font-extrabold text-xs text-on-surface">
-                {lang === 'hi' ? 'इस दिशा में अभी कोई लाइव बस सक्रिय नहीं है' : 'No live bus actively tracking in this direction right now'}
+          <div className="bg-surface-container-low border border-outline-variant/30 rounded-2xl p-3.5 flex items-center justify-between gap-3 shadow-2xs">
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="w-10 h-10 rounded-xl bg-surface-container-high text-primary flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-[22px]">schedule</span>
               </span>
-              <span className="text-[11px] text-on-surface-variant mt-0.5">
-                {lang === 'hi'
-                  ? `नियमित बस सेवा (हर ${activeRoute?.headway || '15-20'} मिनट में) • नीचे स्टॉप समय देखें`
-                  : `Regular service operates every ${activeRoute?.headway || '15-20'} mins • Stop timetable below`}
-              </span>
+              <div className="flex flex-col min-w-0">
+                <span className="font-extrabold text-xs text-on-surface">
+                  {lang === 'hi' ? 'लाइव GPS डेटा उपलब्ध नहीं है' : 'No Live GPS Data Available'}
+                </span>
+                <span className="text-[11px] text-on-surface-variant mt-0.5">
+                  {lang === 'hi'
+                    ? `डेटाबेस व समय सारणी (हर ${activeRoute?.headway || '15-20'} मिनट) के अनुसार अनुमानित समय नीचे देखें`
+                    : `Showing estimated times from database & schedule (every ${activeRoute?.headway || '15-20'} mins)`}
+                </span>
+              </div>
             </div>
+            <span className="px-2.5 py-1 rounded-full bg-surface-container-high text-on-surface-variant text-[10px] font-extrabold shrink-0 border border-outline-variant/40">
+              Estimated
+            </span>
           </div>
         </section>
       )}
@@ -657,7 +662,7 @@ function LiveTrackerContent() {
                         </span>
                         <span className={`text-[10.5px] font-extrabold mt-0.5 ${isNext ? 'text-primary' : 'text-secondary'}`}>
                           {!hasBus
-                            ? (lang === 'hi' ? 'अनुमानित' : 'Scheduled')
+                            ? (lang === 'hi' ? 'Estimated (अनुमानित)' : 'Estimated')
                             : stopEta.etaMinutes <= 1
                             ? (lang === 'hi' ? 'पहुँचने वाली' : 'Arriving')
                             : `~${stopEta.etaMinutes} ${lang === 'hi' ? 'मिनट' : 'mins'}`}

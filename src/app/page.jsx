@@ -469,13 +469,17 @@ export default function HomePage() {
                               <span className="flex items-center gap-1.5 text-primary">
                                 <span className={`w-2 h-2 rounded-full ${routeUpcomingBuses.length > 0 ? 'bg-secondary animate-pulse' : 'bg-outline'}`} />
                                 {routeUpcomingBuses.length > 0
-                                  ? (lang === 'hi' ? 'मार्ग पर आने वाली बसें:' : 'Upcoming Buses to Board:')
-                                  : (lang === 'hi' ? 'बस सेवा स्थिति:' : 'Bus Service Status:')}
+                                  ? (lang === 'hi' ? 'Live GPS • आने वाली बसें:' : 'Live GPS • Upcoming Buses:')
+                                  : (lang === 'hi' ? 'Estimated (अनुमानित समय):' : 'Estimated (No Live GPS):')}
                               </span>
-                              <span className="text-[10px] text-on-surface-variant font-semibold">
+                              <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded ${
+                                routeUpcomingBuses.length > 0
+                                  ? 'bg-secondary-fixed text-on-secondary-fixed'
+                                  : 'bg-surface-container-high text-on-surface-variant'
+                              }`}>
                                 {routeUpcomingBuses.length > 0
-                                  ? `${routeUpcomingBuses.length} ${lang === 'hi' ? 'निकट' : 'approaching'}`
-                                  : (lang === 'hi' ? 'हर 15-20 मिनट' : 'Every 15-20m')}
+                                  ? `${routeUpcomingBuses.length} ${lang === 'hi' ? 'Live' : 'Live'}`
+                                  : (lang === 'hi' ? `Estimated • ~${opt.departureTime?.full || '15m'}` : `Estimated • ~${opt.departureTime?.full || '15m'}`)}
                               </span>
                             </div>
 

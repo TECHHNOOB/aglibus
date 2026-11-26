@@ -528,20 +528,29 @@ function SearchResultsContent() {
                       {primaryLeg?.agency || 'PM e-Bus'}
                     </span>
 
-                    {/* Highlights: FASTEST / ELECTRIC / FREQUENT */}
-                    {isFastest ? (
-                      <span className="bg-secondary-fixed text-on-secondary-fixed text-[10.5px] px-2 py-0.5 rounded-full flex items-center gap-1 font-bold">
+                    {/* Highlights: LIVE GPS vs ESTIMATED */}
+                    {hasUpcomingBus ? (
+                      <span className="bg-secondary-fixed text-on-secondary-fixed text-[10.5px] px-2 py-0.5 rounded-full flex items-center gap-1 font-extrabold">
                         <span className="w-1.5 h-1.5 rounded-full bg-secondary animate-ping" />
-                        {lang === 'hi' ? 'सबसे तेज (FASTEST)' : 'FASTEST'}
-                      </span>
-                    ) : isElectric ? (
-                      <span className="bg-secondary-container text-on-secondary-container text-[10.5px] px-2 py-0.5 rounded-full flex items-center gap-1 font-bold">
-                        <span className="material-symbols-outlined text-[13px]">bolt</span>
-                        {lang === 'hi' ? 'स्मार्ट ई-बस' : 'Smart E-Bus (AC)'}
+                        {lang === 'hi' ? 'Live GPS' : 'Live GPS'}
                       </span>
                     ) : (
-                      <span className="bg-surface-container-high text-on-surface-variant text-[10.5px] px-2 py-0.5 rounded-full font-bold">
-                        {lang === 'hi' ? 'हर 15 मिनट' : 'Every 15 Mins'}
+                      <span className="bg-surface-container-high text-on-surface-variant text-[10.5px] px-2 py-0.5 rounded-full flex items-center gap-1 font-extrabold border border-outline-variant/40">
+                        <span className="material-symbols-outlined text-[12px]">schedule</span>
+                        {lang === 'hi' ? 'Estimated (अनुमानित)' : 'Estimated'}
+                      </span>
+                    )}
+
+                    {isFastest && (
+                      <span className="bg-primary-fixed text-on-primary-fixed text-[10.5px] px-2 py-0.5 rounded-full font-bold">
+                        {lang === 'hi' ? 'सबसे तेज' : 'FASTEST'}
+                      </span>
+                    )}
+
+                    {isElectric && !isFastest && (
+                      <span className="bg-secondary-container text-on-secondary-container text-[10.5px] px-2 py-0.5 rounded-full flex items-center gap-1 font-bold">
+                        <span className="material-symbols-outlined text-[13px]">bolt</span>
+                        {lang === 'hi' ? 'स्मार्ट ई-बस' : 'Smart E-Bus'}
                       </span>
                     )}
 
@@ -663,22 +672,29 @@ function SearchResultsContent() {
                         ) : opt.scheduleSource === 'gtfs' && opt.nextScheduledTimes?.length > 0 ? (
                           <>
                             <p className="text-xs font-bold text-on-surface truncate flex items-center gap-1.5">
-                              <span className="text-primary font-black">
-                                {lang === 'hi' ? '📅 GTFS निर्धारित समय:' : '📅 GTFS Schedule:'}
+                              <span className="px-1.5 py-0.2 rounded bg-surface-container-high text-on-surface-variant text-[10px] font-extrabold">
+                                Estimated
                               </span>
-                              <span>{opt.nextScheduledTimes[0]}</span>
+                              <span className="text-primary font-black">
+                                {lang === 'hi' ? `GTFS समय: ${opt.nextScheduledTimes[0]}` : `GTFS Time: ${opt.nextScheduledTimes[0]}`}
+                              </span>
                             </p>
                             <p className="text-[10.5px] text-on-surface-variant font-medium truncate mt-0.5">
-                              {lang === 'hi' ? 'आगामी समय:' : 'Upcoming:'} {opt.nextScheduledTimes.join(' • ')}
+                              {lang === 'hi' ? 'लाइव GPS उपलब्ध नहीं • आगामी:' : 'No live GPS • Upcoming:'} {opt.nextScheduledTimes.join(' • ')}
                             </p>
                           </>
                         ) : (
                           <>
-                            <p className="text-xs font-bold text-on-surface truncate">
-                              {lang === 'hi' ? 'अगली निर्धारित बस (Next Scheduled Bus)' : 'Next Scheduled Bus'}
+                            <p className="text-xs font-bold text-on-surface truncate flex items-center gap-1.5">
+                              <span className="px-1.5 py-0.2 rounded bg-surface-container-high text-on-surface-variant text-[10px] font-extrabold">
+                                Estimated
+                              </span>
+                              <span>
+                                {lang === 'hi' ? 'अनुमानित समय (डेटाबेस के अनुसार)' : 'Estimated Time (From Database)'}
+                              </span>
                             </p>
                             <p className="text-[10.5px] text-on-surface-variant font-medium truncate mt-0.5">
-                              {lang === 'hi' ? 'नियमित बस सेवा (हर 15-20 मिनट में) • समय पर' : 'Regular Service (Every 15-20 mins) • On Time'}
+                              {lang === 'hi' ? `लाइव GPS उपलब्ध नहीं • हर ${primaryLeg?.headway || '15-20'} मिनट में सेवा` : `No live GPS • Every ${primaryLeg?.headway || '15-20'} mins`}
                               {recentlyDepartedBus && (
                                 <span className="text-outline ml-1.5 font-normal">
                                   ({lang === 'hi' ? `पिछली बस निकल चुकी है` : `Past bus departed`})
