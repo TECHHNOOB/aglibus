@@ -203,7 +203,7 @@ function SearchResultsContent() {
               };
             });
           }
-        } catch {}
+        } catch { }
       }, 250);
     } else {
       setSuggestions({ field: null, stops: [], places: [] });
@@ -292,8 +292,8 @@ function SearchResultsContent() {
     const freq = firstPlan.planKind === 'nearby_direct'
       ? (lang === 'hi' ? 'पास के स्टॉप से सीधी बस' : 'Direct via Nearby Stop')
       : isDirect
-      ? (lang === 'hi' ? 'सीधा रूट' : 'Direct Bus Route')
-      : (lang === 'hi' ? '1 ट्रांसफर रूट' : '1 Transfer Route');
+        ? (lang === 'hi' ? 'सीधा रूट' : 'Direct Bus Route')
+        : (lang === 'hi' ? '1 ट्रांसफर रूट' : '1 Transfer Route');
     return { stops: totalStops, dist: distEst, freq };
   }, [tripPlan, lang]);
 
@@ -332,9 +332,8 @@ function SearchResultsContent() {
           <button
             type="button"
             onClick={() => setShowMap(prev => !prev)}
-            className={`px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors ${
-              showMap ? 'bg-secondary text-on-secondary' : 'bg-primary-fixed text-on-primary-fixed hover:bg-primary/15'
-            }`}
+            className={`px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors ${showMap ? 'bg-secondary text-on-secondary' : 'bg-primary-fixed text-on-primary-fixed hover:bg-primary/15'
+              }`}
           >
             <span className="material-symbols-outlined text-[15px]">map</span>
             <span>{showMap ? (lang === 'hi' ? 'मैप छुपाएं' : 'Hide Map') : (lang === 'hi' ? 'उदयपुर मैप' : 'Udaipur Map')}</span>
@@ -627,11 +626,10 @@ function SearchResultsContent() {
               setActiveFilter(chip.id);
               setSelectedPlanIdx(0);
             }}
-            className={`px-3.5 py-1.5 rounded-full font-bold text-xs whitespace-nowrap flex items-center gap-1 active:scale-95 transition-all ${
-              activeFilter === chip.id
-                ? 'bg-primary-container text-on-primary shadow-xs'
-                : 'bg-surface-container-lowest text-on-surface border border-outline-variant/30 hover:bg-surface-container'
-            }`}
+            className={`px-3.5 py-1.5 rounded-full font-bold text-xs whitespace-nowrap flex items-center gap-1 active:scale-95 transition-all ${activeFilter === chip.id
+              ? 'bg-primary-container text-on-primary shadow-xs'
+              : 'bg-surface-container-lowest text-on-surface border border-outline-variant/30 hover:bg-surface-container'
+              }`}
           >
             {chip.icon && <span className={`material-symbols-outlined text-[15px] ${chip.iconColor}`}>{chip.icon}</span>}
             <span>{lang === 'hi' ? chip.hi : chip.en}</span>
@@ -711,13 +709,12 @@ function SearchResultsContent() {
             return (
               <article
                 key={i}
-                className={`bg-surface-container-lowest rounded-2xl shadow-sm border p-4 relative overflow-hidden flex flex-col gap-3 transition-colors ${
-                  isMapActive
-                    ? 'border-primary ring-2 ring-primary/20'
-                    : hasUpcomingBus
+                className={`bg-surface-container-lowest rounded-2xl shadow-sm border p-4 relative overflow-hidden flex flex-col gap-3 transition-colors ${isMapActive
+                  ? 'border-primary ring-2 ring-primary/20'
+                  : hasUpcomingBus
                     ? 'border-secondary/40 hover:border-secondary'
                     : 'border-outline-variant/30 hover:border-primary/40'
-                }`}
+                  }`}
               >
                 {/* Top Badges & Alarm Bar */}
                 <div className="flex items-start justify-between gap-2">
@@ -768,9 +765,8 @@ function SearchResultsContent() {
                     type="button"
                     aria-label="Set Stop Arrival Alarm"
                     onClick={() => toggleAlarm(i, routeCode)}
-                    className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all active:scale-90 ${
-                      isAlarmSet ? 'bg-primary text-on-primary shadow-xs' : 'bg-surface-container text-on-surface-variant hover:text-primary'
-                    }`}
+                    className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all active:scale-90 ${isAlarmSet ? 'bg-primary text-on-primary shadow-xs' : 'bg-surface-container text-on-surface-variant hover:text-primary'
+                      }`}
                     title={isAlarmSet ? 'Alarm Active' : 'Set Arrival Alarm'}
                   >
                     <span className="material-symbols-outlined text-[19px]">
@@ -806,18 +802,16 @@ function SearchResultsContent() {
                 )}
 
                 {/* Live / Scheduled Next Bus Box */}
-                <div className={`rounded-xl p-3 flex flex-col gap-2 border ${
-                  hasUpcomingBus
-                    ? 'bg-secondary-container/25 border-secondary-container/50'
-                    : isServiceClosed
+                <div className={`rounded-xl p-3 flex flex-col gap-2 border ${hasUpcomingBus
+                  ? 'bg-secondary-container/25 border-secondary-container/50'
+                  : isServiceClosed
                     ? 'bg-error-container/20 border-error/25'
                     : 'bg-surface-container-low border-outline-variant/30'
-                }`}>
+                  }`}>
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
-                      <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
-                        hasUpcomingBus ? 'bg-secondary animate-pulse' : isServiceClosed ? 'bg-error' : 'bg-outline'
-                      }`} />
+                      <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${hasUpcomingBus ? 'bg-secondary animate-pulse' : isServiceClosed ? 'bg-error' : 'bg-outline'
+                        }`} />
                       <div className="min-w-0">
                         {hasUpcomingBus ? (
                           <>
@@ -985,11 +979,10 @@ function SearchResultsContent() {
                 <div className="flex items-center gap-2 pt-0.5">
                   <Link
                     href={`/track?route=${primaryRouteId}${nextUpcomingBus ? `&bus=${nextUpcomingBus.id}` : ''}&dir=${primaryLeg?.isReverse ? 'reverse' : 'forward'}&from=${primaryLeg?.fromStop?.id ?? ''}&to=${primaryLeg?.toStop?.id ?? ''}`}
-                    className={`flex-1 h-11 active:scale-[0.98] rounded-xl flex items-center justify-center gap-2 font-bold text-xs shadow-xs transition-all ${
-                      hasUpcomingBus
-                        ? 'bg-secondary hover:bg-secondary/90 text-on-secondary'
-                        : 'bg-primary hover:bg-primary/95 text-on-primary'
-                    }`}
+                    className={`flex-1 h-11 active:scale-[0.98] rounded-xl flex items-center justify-center gap-2 font-bold text-xs shadow-xs transition-all ${hasUpcomingBus
+                      ? 'bg-secondary hover:bg-secondary/90 text-on-secondary'
+                      : 'bg-primary hover:bg-primary/95 text-on-primary'
+                      }`}
                   >
                     <span className="material-symbols-outlined text-[19px]">
                       {hasUpcomingBus ? 'near_me' : 'alt_route'}
@@ -1004,9 +997,8 @@ function SearchResultsContent() {
                   <button
                     type="button"
                     onClick={() => handleOpenPlanOnMap(i)}
-                    className={`h-11 px-3 rounded-xl flex items-center justify-center font-bold text-xs gap-1 transition-colors ${
-                      isMapActive ? 'bg-primary-fixed text-on-primary-fixed' : 'bg-surface-container hover:bg-surface-container-high text-primary'
-                    }`}
+                    className={`h-11 px-3 rounded-xl flex items-center justify-center font-bold text-xs gap-1 transition-colors ${isMapActive ? 'bg-primary-fixed text-on-primary-fixed' : 'bg-surface-container hover:bg-surface-container-high text-primary'
+                      }`}
                     title="Show journey path on Udaipur Map"
                   >
                     <span className="material-symbols-outlined text-[16px]">map</span>
@@ -1044,13 +1036,12 @@ function SearchResultsContent() {
                               return (
                                 <div key={`${lIdx}-${s.id || sIdx}`} className="flex items-center gap-2 text-xs">
                                   <span
-                                    className={`w-2 h-2 rounded-full flex-shrink-0 -ml-[13px] ${
-                                      isStart
-                                        ? 'bg-secondary ring-4 ring-secondary-fixed/40'
-                                        : isEnd
+                                    className={`w-2 h-2 rounded-full flex-shrink-0 -ml-[13px] ${isStart
+                                      ? 'bg-secondary ring-4 ring-secondary-fixed/40'
+                                      : isEnd
                                         ? 'bg-tertiary ring-4 ring-tertiary-fixed/40'
                                         : 'bg-primary'
-                                    }`}
+                                      }`}
                                   />
                                   <span className={`font-semibold ${isStart || isEnd ? 'text-on-surface font-bold' : 'text-on-surface-variant'}`}>
                                     {lang === 'hi' ? (s.name || s.english) : (s.english || s.name)}

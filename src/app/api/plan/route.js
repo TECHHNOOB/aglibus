@@ -599,18 +599,18 @@ export async function GET(request) {
   // Nearest stops around origin (always helpful for showing where nearby buses depart)
   const nearbyBoardingHubs = Number.isFinite(fromPoint.lat)
     ? findNearestStops(fromPoint.lat, fromPoint.lng, {
-        limit: 5,
-        maxDistanceMeters: 2500,
-        excludeStopId: fromPoint.exactStopId,
-      })
+      limit: 5,
+      maxDistanceMeters: 2500,
+      excludeStopId: fromPoint.exactStopId,
+    })
     : [];
 
   const nearbyDestHubs = Number.isFinite(toPoint.lat)
     ? findNearestStops(toPoint.lat, toPoint.lng, {
-        limit: 4,
-        maxDistanceMeters: 1500,
-        excludeStopId: toPoint.exactStopId,
-      })
+      limit: 4,
+      maxDistanceMeters: 1500,
+      excludeStopId: toPoint.exactStopId,
+    })
     : [];
 
   const now = new Date();
