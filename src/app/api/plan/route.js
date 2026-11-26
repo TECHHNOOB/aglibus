@@ -69,12 +69,30 @@ export async function GET(request) {
       .trim();
   }
 
+  const CITY_STATION_IDS = [85, 109, 182];
+  const RANA_PRATAP_STATION_ID = 13;
+
   // Find stop ID with smart token & fuzzy matching
   function resolveStopId(input) {
     if (!input) return null;
     if (/^\d+$/.test(input.trim())) return canonicalStop(Number(input.trim()));
     
     const cleanInput = cleanText(input);
+    const noSpaceInput = cleanInput.replace(/\s+/g, '').replace(/partap/g, 'pratap');
+
+    // Explicit disambiguation for Udaipur's two railway stations:
+    // 1. Rana Pratap Nagar Railway Station (near Thokar Choraha)
+    if (/(rana|pratap|thokar|राणा|प्रताप|ठोकर)/i.test(noSpaceInput) && /(station|railway|स्टेशन|रेलवे)/i.test(cleanInput)) {
+      return RANA_PRATAP_STATION_ID;
+    }
+    // 2. City Railway Station (near Udiyapol)
+    if (/(city|udaipur|udiyapol|udayapol|सिटी|उदियापोल)/i.test(cleanInput) && /(station|railway|स्टेशन|रेलवे)/i.test(cleanInput)) {
+      return 85;
+    }
+    if (cleanInput === 'railway station' || cleanInput === 'रेलवे स्टेशन') {
+      return 85;
+    }
+
     const inputWords = cleanInput.split(' ').filter(w => w.length > 1).map(w => w.replace(/partap/g, 'pratap'));
     
     // 1. Exact match in stopEnglish or stopNames
@@ -94,7 +112,6 @@ export async function GET(request) {
     }
 
     // 3. Normalized without spaces (handles "ranapratap" matching "rana pratap")
-    const noSpaceInput = cleanInput.replace(/\s+/g, '').replace(/partap/g, 'pratap');
     for (const [idStr, eng] of Object.entries(stopEnglish)) {
       const noSpaceEng = cleanText(eng).replace(/\s+/g, '');
       if (noSpaceEng.includes(noSpaceInput)) return canonicalStop(Number(idStr));
@@ -146,8 +163,23 @@ export async function GET(request) {
     }, { status: 404 });
   }
 
+  const fromCandidates = CITY_STATION_IDS.includes(fromId) ? CITY_STATION_IDS : [fromId];
+  const toCandidates = CITY_STATION_IDS.includes(toId) ? CITY_STATION_IDS : [toId];
+
+  const gatherPlans = () => {
+    const all = [];
+    for (const f of fromCandidates) {
+      for (const t of toCandidates) {
+        if (f === t) continue;
+        const found = planTrips(f, t, passengerRoutes) || [];
+        all.push(...found);
+      }
+    }
+    return all;
+  };
+
   const [rawPlans, fleetData] = await Promise.all([
-    Promise.resolve(planTrips(fromId, toId, passengerRoutes) || []),
+    Promise.resolve(gatherPlans()),
     fleet().catch(() => ({ buses: [] }))
   ]);
 
