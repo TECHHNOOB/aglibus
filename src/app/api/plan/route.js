@@ -2,6 +2,25 @@ import { NextResponse } from 'next/server';
 import { passengerRoutes, canonicalStop, stopNames, stopEnglish, stopLocations, planTrips, dutyRouteHints } from '@/lib/network.mjs';
 import { fleet } from '@/lib/feeds.mjs';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+
+function formatClockIST(date) {
+  const ist = new Date(date.getTime() + IST_OFFSET_MS);
+  let h = ist.getUTCHours();
+  const m = ist.getUTCMinutes().toString().padStart(2, '0');
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  return { time: `${h}:${m}`, ampm, full: `${h}:${m} ${ampm}` };
+}
+
+function getISTMinutesOfDay(date) {
+  const ist = new Date(date.getTime() + IST_OFFSET_MS);
+  return ist.getUTCHours() * 60 + ist.getUTCMinutes();
+}
+
 function formatPlate(id) {
   if (!id) return 'City Bus';
   const m = id.match(/^([A-Z]{2})(\d{2})([A-Z]+)(\d{4})$/);
@@ -130,7 +149,11 @@ export async function GET(request) {
     fleet().catch(() => ({ buses: [] }))
   ]);
 
-  const activeBuses = fleetData.buses || [];
+  const checkedAt = fleetData.checkedAt || Date.now();
+  // Only consider genuinely live buses (exclude stale 'last' signals and signals older than 3 minutes)
+  const activeBuses = (fleetData.buses || []).filter(
+    b => b.source !== 'last' && b.gpsAt && (checkedAt - b.gpsAt <= 180000)
+  );
   
   // Smart Curation:
   // 1. Prioritize Direct Routes (unique by routeId)
@@ -168,6 +191,9 @@ export async function GET(request) {
   const cleanRouteId = (rId) => String(rId || '').replace(/^PM/i, '');
 
   const now = new Date();
+  const istMinutesOfDay = getISTMinutesOfDay(now);
+  // Udaipur City Buses operate approx 06:30 AM to 09:30 PM IST
+  const isNightWindow = istMinutesOfDay >= (21 * 60 + 30) || istMinutesOfDay < (6 * 60 + 15);
 
   const enriched = curatedPlans.map((p, planIdx) => {
     const totalMinutes = p.minutes;
@@ -201,6 +227,9 @@ export async function GET(request) {
       const departedBuses = [];
 
       for (const b of matchedBuses) {
+        // At night, ignore stationary/parked buses
+        if (isNightWindow && (!b.speed || b.speed < 2)) continue;
+
         let closestStopId = null;
         let closestIdx = -1;
         let minDist = Infinity;
@@ -326,39 +355,58 @@ export async function GET(request) {
       };
     });
 
-    // Plan-level departure & arrival time calculation
+    // Plan-level departure & arrival time calculation in IST
     const primaryLeg = legs[0];
-    const departureMinutes = primaryLeg?.nextUpcomingBus
-      ? primaryLeg.nextUpcomingBus.etaMinutes
-      : (8 + planIdx * 10);
+    const hasLiveBus = Boolean(primaryLeg?.nextUpcomingBus);
+    const isServiceClosed = isNightWindow && !hasLiveBus;
 
-    const depDate = new Date(now.getTime() + departureMinutes * 60000);
+    let departureMinutes;
+    let depDate;
+
+    if (hasLiveBus) {
+      departureMinutes = primaryLeg.nextUpcomingBus.etaMinutes;
+      depDate = new Date(now.getTime() + departureMinutes * 60000);
+    } else if (isServiceClosed) {
+      // Next morning first bus at 06:30 AM IST (+ staggered 10 mins per option)
+      const targetMorningMin = (6 * 60 + 30) + planIdx * 10;
+      const minsUntilMorning = istMinutesOfDay >= (21 * 60 + 30)
+        ? (24 * 60 - istMinutesOfDay) + targetMorningMin
+        : targetMorningMin - istMinutesOfDay;
+      departureMinutes = minsUntilMorning;
+      depDate = new Date(now.getTime() + minsUntilMorning * 60000);
+    } else {
+      departureMinutes = 8 + planIdx * 10;
+      depDate = new Date(now.getTime() + departureMinutes * 60000);
+    }
+
     const arrDate = new Date(depDate.getTime() + totalMinutes * 60000);
-
-    const formatClock = (d) => {
-      let h = d.getHours();
-      const m = d.getMinutes().toString().padStart(2, '0');
-      const ampm = h >= 12 ? 'PM' : 'AM';
-      h = h % 12 || 12;
-      return { time: `${h}:${m}`, ampm, full: `${h}:${m} ${ampm}` };
-    };
 
     return {
       totalMinutes,
       minutes: totalMinutes,
       transferCount,
       departureMinutes,
-      departureTime: formatClock(depDate),
-      arrivalTime: formatClock(arrDate),
-      hasLiveUpcomingBus: primaryLeg?.hasUpcomingBus || false,
+      departureTime: formatClockIST(depDate),
+      arrivalTime: formatClockIST(arrDate),
+      isServiceClosed,
+      hasLiveUpcomingBus: hasLiveBus,
       nextUpcomingBus: primaryLeg?.nextUpcomingBus || null,
       legs
     };
   });
 
+  // Sort plans: live upcoming buses first, then fewest transfers, then shortest duration
+  enriched.sort((a, b) => {
+    if (a.hasLiveUpcomingBus !== b.hasLiveUpcomingBus) return a.hasLiveUpcomingBus ? -1 : 1;
+    if (a.transferCount !== b.transferCount) return a.transferCount - b.transferCount;
+    return a.totalMinutes - b.totalMinutes;
+  });
+
   return NextResponse.json({
     from: { id: fromId, name: stopNames[fromId], english: stopEnglish[fromId] },
     to: { id: toId, name: stopNames[toId], english: stopEnglish[toId] },
+    isServiceClosed: isNightWindow && !enriched.some(p => p.hasLiveUpcomingBus),
+    currentTimeIST: formatClockIST(now).full,
     plans: enriched
   });
 }

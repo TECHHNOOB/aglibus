@@ -166,8 +166,9 @@ function SearchResultsContent() {
     const arrDate = new Date(depDate.getTime() + (opt.totalMinutes || 20) * 60000);
 
     const formatT = (d) => {
-      let h = d.getHours();
-      const m = d.getMinutes().toString().padStart(2, '0');
+      const ist = new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
+      let h = ist.getUTCHours();
+      const m = ist.getUTCMinutes().toString().padStart(2, '0');
       const ampm = h >= 12 ? 'PM' : 'AM';
       h = h % 12 || 12;
       return { time: `${h}:${m}`, ampm };
@@ -505,10 +506,12 @@ function SearchResultsContent() {
             const stopsCount = opt.legs.reduce((acc, l) => acc + (l.stopsCount || 4), 0);
             const distanceEst = (stopsCount * 0.75).toFixed(1);
 
-            // UPCOMING LIVE BUS ONLY (Buses that have NOT passed the boarding stop!)
-            const nextUpcomingBus = primaryLeg?.nextUpcomingBus || null;
-            const hasUpcomingBus = Boolean(nextUpcomingBus);
+            // UPCOMING LIVE BUSES ONLY (Buses that have NOT passed the boarding stop!)
+            const allUpcomingBuses = primaryLeg?.upcomingBuses || [];
+            const nextUpcomingBus = primaryLeg?.nextUpcomingBus || allUpcomingBuses[0] || null;
+            const hasUpcomingBus = allUpcomingBuses.length > 0;
             const recentlyDepartedBus = primaryLeg?.departedBuses?.[0] || null;
+            const isServiceClosed = Boolean(opt.isServiceClosed || tripPlan?.isServiceClosed);
 
             return (
               <article
@@ -616,54 +619,88 @@ function SearchResultsContent() {
                 </div>
 
                 {/* Live Telemetry Status Banner (Only shows genuinely UPCOMING buses) */}
-                <div className={`rounded-xl p-2.5 flex items-center justify-between border ${
+                <div className={`rounded-xl p-2.5 flex flex-col gap-2 border ${
                   hasUpcomingBus
                     ? 'bg-secondary-container/25 border-secondary-container/40'
+                    : isServiceClosed
+                    ? 'bg-error-container/20 border-error/20'
                     : 'bg-surface-container-low border-outline-variant/30'
                 }`}>
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
-                      hasUpcomingBus ? 'bg-secondary animate-pulse' : 'bg-outline'
-                    }`} />
-                    <div className="truncate">
-                      {hasUpcomingBus ? (
-                        <>
-                          <p className="text-xs font-bold text-on-secondary-container truncate flex items-center gap-1.5">
-                            <span className="text-secondary font-black">
-                              {lang === 'hi' ? 'आने वाली बस:' : 'Upcoming Bus:'}
-                            </span>
-                            <span>{nextUpcomingBus.plate}</span>
-                            <span className="px-1.5 py-0.2 rounded bg-secondary-fixed text-on-secondary-fixed text-[10px] font-bold">
-                              {nextUpcomingBus.speed > 0 ? `${nextUpcomingBus.speed} km/h` : (lang === 'hi' ? 'स्टॉप' : 'Halt')}
-                            </span>
-                          </p>
-                          <p className="text-[10.5px] text-secondary font-bold truncate mt-0.5">
-                            📍 {nextUpcomingBus.isAtStop
-                              ? (lang === 'hi' ? 'अभी आपके स्टॉप पर है (At Stop Now)' : 'At your stop now')
-                              : `${nextUpcomingBus.stopsAway} ${lang === 'hi' ? 'स्टॉप दूर' : 'stops away'} (${nextUpcomingBus.nearStop.name || nextUpcomingBus.nearStop.english}) • ~${nextUpcomingBus.etaMinutes} ${t('minutes')}`}
-                          </p>
-                        </>
-                      ) : (
-                        <>
-                          <p className="text-xs font-bold text-on-surface truncate">
-                            {lang === 'hi' ? 'अगली निर्धारित बस (Next Scheduled Bus)' : 'Next Scheduled Bus'}
-                          </p>
-                          <p className="text-[10.5px] text-on-surface-variant font-medium truncate mt-0.5">
-                            {lang === 'hi' ? 'नियमित बस सेवा (हर 15-20 मिनट में) • समय पर' : 'Regular Service (Every 15-20 mins) • On Time'}
-                            {recentlyDepartedBus && (
-                              <span className="text-outline ml-1.5 font-normal">
-                                ({lang === 'hi' ? `पिछली बस निकल चुकी है` : `Past bus departed`})
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
+                        hasUpcomingBus ? 'bg-secondary animate-pulse' : isServiceClosed ? 'bg-error' : 'bg-outline'
+                      }`} />
+                      <div className="truncate">
+                        {hasUpcomingBus ? (
+                          <>
+                            <p className="text-xs font-bold text-on-secondary-container truncate flex items-center gap-1.5">
+                              <span className="text-secondary font-black">
+                                {lang === 'hi' ? `आने वाली बस (${allUpcomingBuses.length}):` : `Upcoming (${allUpcomingBuses.length}):`}
                               </span>
-                            )}
-                          </p>
-                        </>
-                      )}
+                              <span>{nextUpcomingBus.plate}</span>
+                              <span className="px-1.5 py-0.2 rounded bg-secondary-fixed text-on-secondary-fixed text-[10px] font-bold">
+                                {nextUpcomingBus.speed > 0 ? `${nextUpcomingBus.speed} km/h` : (lang === 'hi' ? 'स्टॉप' : 'Halt')}
+                              </span>
+                            </p>
+                            <p className="text-[10.5px] text-secondary font-bold truncate mt-0.5">
+                              📍 {nextUpcomingBus.isAtStop
+                                ? (lang === 'hi' ? 'अभी आपके स्टॉप पर है (At Stop Now)' : 'At your stop now')
+                                : `${nextUpcomingBus.stopsAway} ${lang === 'hi' ? 'स्टॉप दूर' : 'stops away'} (${nextUpcomingBus.nearStop.name || nextUpcomingBus.nearStop.english}) • ~${nextUpcomingBus.etaMinutes} ${t('minutes')}`}
+                            </p>
+                          </>
+                        ) : isServiceClosed ? (
+                          <>
+                            <p className="text-xs font-bold text-error truncate">
+                              {lang === 'hi' ? '🌙 रात्रि में बस सेवा बंद है' : '🌙 Night Service Closed'}
+                            </p>
+                            <p className="text-[10.5px] text-on-surface-variant font-medium truncate mt-0.5">
+                              {lang === 'hi'
+                                ? `रात 9:30 से सुबह 6:30 तक सेवा बंद • पहली बस ${times.dep.time} ${times.dep.ampm}`
+                                : `Closed 9:30 PM – 6:30 AM • Next morning bus ${times.dep.time} ${times.dep.ampm}`}
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-xs font-bold text-on-surface truncate">
+                              {lang === 'hi' ? 'अगली निर्धारित बस (Next Scheduled Bus)' : 'Next Scheduled Bus'}
+                            </p>
+                            <p className="text-[10.5px] text-on-surface-variant font-medium truncate mt-0.5">
+                              {lang === 'hi' ? 'नियमित बस सेवा (हर 15-20 मिनट में) • समय पर' : 'Regular Service (Every 15-20 mins) • On Time'}
+                              {recentlyDepartedBus && (
+                                <span className="text-outline ml-1.5 font-normal">
+                                  ({lang === 'hi' ? `पिछली बस निकल चुकी है` : `Past bus departed`})
+                                </span>
+                              )}
+                            </p>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-right flex-shrink-0 pl-2">
+                      <span className="text-sm font-black text-on-surface">₹10 - ₹20</span>
+                      <span className="block text-[10px] text-secondary font-bold">Pass / UPI</span>
                     </div>
                   </div>
-                  <div className="text-right flex-shrink-0 pl-2">
-                    <span className="text-sm font-black text-on-surface">₹10 - ₹20</span>
-                    <span className="block text-[10px] text-secondary font-bold">Pass / UPI</span>
-                  </div>
+
+                  {/* All Upcoming Buses on this Route in User's Direction */}
+                  {hasUpcomingBus && allUpcomingBuses.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 pt-1 border-t border-secondary-container/30">
+                      {allUpcomingBuses.map((bus) => (
+                        <Link
+                          key={bus.id}
+                          href={`/track?route=${primaryRouteId}&bus=${bus.id}&dir=${primaryLeg?.isReverse ? 'reverse' : 'forward'}&from=${primaryLeg?.fromStop?.id ?? ''}&to=${primaryLeg?.toStop?.id ?? ''}`}
+                          className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-surface-container-lowest hover:bg-primary hover:text-on-primary border border-outline-variant/40 text-on-surface font-bold text-[10.5px] transition-all shadow-2xs group"
+                        >
+                          <span className="material-symbols-outlined text-[13px] text-primary group-hover:text-on-primary">directions_bus</span>
+                          <span>{bus.plate}</span>
+                          <span className="px-1 py-0.2 rounded bg-secondary-fixed text-on-secondary-fixed text-[9.5px] font-extrabold">
+                            {bus.isAtStop ? (lang === 'hi' ? 'यहीं है' : 'Here') : `~${bus.etaMinutes}m`}
+                          </span>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Action Buttons: Big Live Track CTA + Stops Accordion Toggle */}

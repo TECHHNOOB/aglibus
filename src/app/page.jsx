@@ -498,6 +498,13 @@ export default function HomePage() {
                                   </Link>
                                 ))}
                               </div>
+                            ) : opt.isServiceClosed ? (
+                              <div className="flex items-center justify-between text-[11px] text-error font-semibold">
+                                <span>{lang === 'hi' ? '🌙 रात्रि में बस सेवा बंद (9:30 PM – 6:30 AM)' : '🌙 Night Service Closed (9:30 PM – 6:30 AM)'}</span>
+                                <span className="text-on-surface-variant font-bold shrink-0 ml-1">
+                                  {lang === 'hi' ? `सुबह ${opt.departureTime?.full || '6:30 AM'}` : `Next ${opt.departureTime?.full || '6:30 AM'}`}
+                                </span>
+                              </div>
                             ) : (
                               <div className="flex items-center justify-between text-[11px] text-on-surface-variant">
                                 <span>{lang === 'hi' ? 'नियमित बस सेवा (हर 15-20 मिनट में)' : 'Regular city service (every 15-20 mins)'}</span>

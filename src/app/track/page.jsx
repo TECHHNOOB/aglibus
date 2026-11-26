@@ -281,9 +281,10 @@ function LiveTrackerContent() {
 
     const diff = index - currentStopIndex;
     const targetTimestamp = new Date(now.getTime() + diff * avgMinPerStop * 60000);
+    const ist = new Date(targetTimestamp.getTime() + 5.5 * 60 * 60 * 1000);
 
-    let h = targetTimestamp.getHours();
-    const m = targetTimestamp.getMinutes().toString().padStart(2, '0');
+    let h = ist.getUTCHours();
+    const m = ist.getUTCMinutes().toString().padStart(2, '0');
     const ampm = h >= 12 ? 'PM' : 'AM';
     h = h % 12 || 12;
     const timeStr = `${h}:${m} ${ampm}`;
