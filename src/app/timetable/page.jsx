@@ -320,7 +320,7 @@ export default function TimetablePage() {
               }`}
             >
               <span className="material-symbols-outlined text-[15px]">grid_view</span>
-              <span>समय ग्रिड ({filteredTrips.length})</span>
+              <span>{lang === 'hi' ? `समय ग्रिड (${filteredTrips.length})` : `Time Grid (${filteredTrips.length})`}</span>
             </button>
             <button
               type="button"
@@ -332,7 +332,7 @@ export default function TimetablePage() {
               }`}
             >
               <span className="material-symbols-outlined text-[15px]">view_list</span>
-              <span>विस्तृत ट्रिप्स</span>
+              <span>{lang === 'hi' ? 'विस्तृत ट्रिप्स' : 'Detailed Trips'}</span>
             </button>
             <button
               type="button"

@@ -23,7 +23,7 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="hi">
+    <html lang="en">
       <body className="bg-surface text-on-surface antialiased selection:bg-primary-fixed selection:text-on-primary-fixed">
         <LanguageProvider>
           <div className="min-h-screen flex flex-col justify-between max-w-2xl mx-auto bg-surface shadow-2xl relative">

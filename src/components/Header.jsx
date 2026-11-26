@@ -32,21 +32,21 @@ export default function Header() {
           >
             <span
               className={`px-2 py-1 rounded-lg text-xs font-bold transition-all ${
-                lang === 'hi'
-                  ? 'bg-primary text-on-primary shadow-xs'
-                  : 'text-on-surface-variant hover:text-on-surface'
-              }`}
-            >
-              हिन्दी
-            </span>
-            <span
-              className={`px-2 py-1 rounded-lg text-xs font-bold transition-all ${
                 lang === 'en'
                   ? 'bg-primary text-on-primary shadow-xs'
                   : 'text-on-surface-variant hover:text-on-surface'
               }`}
             >
               EN
+            </span>
+            <span
+              className={`px-2 py-1 rounded-lg text-xs font-bold transition-all ${
+                lang === 'hi'
+                  ? 'bg-primary text-on-primary shadow-xs'
+                  : 'text-on-surface-variant hover:text-on-surface'
+              }`}
+            >
+              हिन्दी
             </span>
           </button>
 

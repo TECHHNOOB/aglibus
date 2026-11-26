@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const LanguageContext = createContext({
-  lang: 'hi',
+  lang: 'en',
   setLang: () => {},
   t: (key, params) => key,
   toggleLang: () => {},
@@ -206,12 +206,12 @@ const translations = {
 };
 
 export function LanguageProvider({ children }) {
-  const [lang, setLang] = useState('hi');
+  const [lang, setLang] = useState('en');
   const [stopsCatalog, setStopsCatalog] = useState([]);
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem('aglibus_lang');
+      const saved = localStorage.getItem('udaipur_city_bus_lang');
       if (saved === 'en' || saved === 'hi') {
         setLang(saved);
       }
@@ -228,7 +228,7 @@ export function LanguageProvider({ children }) {
     const next = lang === 'hi' ? 'en' : 'hi';
     setLang(next);
     try {
-      localStorage.setItem('aglibus_lang', next);
+      localStorage.setItem('udaipur_city_bus_lang', next);
     } catch (e) {}
   };
 
