@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { passengerRoutes, canonicalStop, stopNames, stopEnglish, stopLocations, planTrips, dutyRouteHints } from '@/lib/network.mjs';
 import { fleet } from '@/lib/feeds.mjs';
+import { directedMatches } from '@/lib/matching.mjs';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -151,9 +152,9 @@ export async function GET(request) {
 
   const checkedAt = fleetData.checkedAt || Date.now();
   // Only consider genuinely live buses (exclude stale 'last' signals and signals older than 3 minutes)
-  const activeBuses = (fleetData.buses || []).filter(
-    b => b.source !== 'last' && b.gpsAt && (checkedAt - b.gpsAt <= 180000)
-  );
+  const activeBuses = (fleetData.buses || [])
+    .filter(b => b.source !== 'last' && b.gpsAt && (checkedAt - b.gpsAt <= 180000))
+    .map(b => ({ ...b, matches: directedMatches(b, checkedAt) }));
   
   // Smart Curation:
   // 1. Prioritize Direct Routes (unique by routeId)
@@ -211,9 +212,11 @@ export async function GET(request) {
       const rId = String(leg.route.id);
       const rCode = String(leg.route.code || '');
       const rNum = cleanRouteId(rCode) || cleanRouteId(rId);
+      const travelDir = Math.sign(toIdx - fromIdx); // +1 forward, -1 reverse
 
-      // Find all live buses mapped to this route
+      // Find all live buses mapped to this route via directedMatches, duty hints, or feed assignment
       const matchedBuses = activeBuses.filter(b => {
+        if (b.matches?.some(m => m.routeId === rId)) return true;
         const bHint = dutyRouteHints[b.id] ? String(dutyRouteHints[b.id]) : '';
         if (b.routeId === rId || b.routeId === rCode) return true;
         if (bHint && (bHint === rId || bHint === rNum)) return true;
@@ -222,13 +225,19 @@ export async function GET(request) {
         return false;
       });
 
-      // Classify each bus into upcoming or departed relative to boarding stop (leg.from)
+      // Classify each bus into upcoming or departed relative to boarding stop (leg.from) and travel direction
       const upcomingBuses = [];
       const departedBuses = [];
 
       for (const b of matchedBuses) {
         // At night, ignore stationary/parked buses
         if (isNightWindow && (!b.speed || b.speed < 2)) continue;
+
+        const dirMatch = b.matches?.find(m => m.routeId === rId);
+        // If motion tracking proved the bus is actively moving in the OPPOSITE direction, exclude it!
+        if (dirMatch && dirMatch.direction !== 0 && dirMatch.direction !== travelDir) {
+          continue;
+        }
 
         let closestStopId = null;
         let closestIdx = -1;
@@ -254,7 +263,19 @@ export async function GET(request) {
         let isAtStop = false;
         let stopsAway = 0;
 
-        if (!isReverse) {
+        if (dirMatch && Number.isFinite(dirMatch.progress)) {
+          const progress = dirMatch.progress;
+          const delta = (progress - fromIdx) * travelDir;
+          if (Math.abs(delta) <= 0.35 && minDist <= 400) {
+            isAtStop = true;
+            stopsAway = 0;
+          } else if (delta <= 0) {
+            isUpcoming = true;
+            stopsAway = Math.max(1, Math.round(Math.abs(fromIdx - progress)));
+          } else {
+            stopsAway = Math.max(1, Math.round(Math.abs(progress - fromIdx)));
+          }
+        } else if (!isReverse) {
           // Forward direction: 0 -> fromIdx -> toIdx -> end
           if (closestIdx < fromIdx) {
             isUpcoming = true;
@@ -263,7 +284,6 @@ export async function GET(request) {
             isAtStop = true;
             stopsAway = 0;
           } else {
-            // Bus is past fromIdx!
             stopsAway = closestIdx - fromIdx;
           }
         } else {
@@ -275,12 +295,13 @@ export async function GET(request) {
             isAtStop = true;
             stopsAway = 0;
           } else {
-            // Bus is past fromIdx!
             stopsAway = fromIdx - closestIdx;
           }
         }
 
-        const etaMinutes = isAtStop ? 1 : Math.max(2, Math.round(stopsAway * 2.5));
+        const totalRouteStops = Math.max(1, leg.route.stops.length - 1);
+        const avgMinPerStop = leg.route.minutes ? (leg.route.minutes / totalRouteStops) : 2.5;
+        const etaMinutes = isAtStop ? 1 : Math.max(2, Math.round(stopsAway * avgMinPerStop));
         const nearStopName = stopNames[closestStopId] || '';
         const nearStopEng = stopEnglish[closestStopId] || nearStopName;
 
@@ -290,6 +311,8 @@ export async function GET(request) {
           speed: Math.round(b.speed || 0),
           lat: b.lat,
           lng: b.lng,
+          direction: dirMatch?.direction || 0,
+          directionConfirmed: Boolean(dirMatch && dirMatch.direction === travelDir),
           isUpcoming: isUpcoming || isAtStop,
           isAtStop,
           stopsAway,

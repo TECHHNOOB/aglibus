@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { fleet } from '@/lib/feeds.mjs';
-import { sourceMatch, routePosition, inferredDuty } from '@/lib/matching.mjs';
+import { directedMatches } from '@/lib/matching.mjs';
 import {
   passengerRoutes,
   canonicalStop,
@@ -52,45 +52,42 @@ export async function GET() {
   try {
     const data = await fleet();
     const buses = data.buses.map(bus => {
-      const matches = [];
-      const hasRecentGps = bus.source !== 'last' && bus.gpsAt && (data.checkedAt - bus.gpsAt <= 300000);
+      const live = Boolean(bus.gpsAt && (data.checkedAt - bus.gpsAt <= 180000) && bus.source !== 'last');
+      const rawMatches = live ? directedMatches(bus, data.checkedAt) : [];
+      const matches = rawMatches.map(m => ({
+        ...m,
+        position: m.position ? {
+          ...m.position,
+          stopIds: (m.position.stopIds || []).map(canonicalStop)
+        } : null
+      }));
 
-      if (hasRecentGps) {
-        for (const route of passengerRoutes) {
-          const reported = sourceMatch(bus, route);
-          if (!reported && !inferredDuty(bus, route)) continue;
-          const pos = routePosition(bus, route);
-          const position = !pos ? null : {
-            kind: pos.between ? 'between_stops_estimate' : 'near_stop',
-            stopIds: route.stops.slice(pos.index, pos.index + (pos.between ? 2 : 1)).map(canonicalStop)
-          };
-          matches.push({ routeId: route.id, basis: reported ? 'feed' : 'duty_hint_and_gps', position });
-        }
-      }
-
-      // Route determination: from hints, assignment, or best match
-      const assignedRouteId = matches[0]?.routeId || dutyRouteHints[bus.id] || (bus.assignment ? bus.assignment.replace(/^ud/i, '') : null);
-      const matchedRoute = passengerRoutes.find(r => r.id === assignedRouteId) || (bus.agency === 'UCTSL' ? passengerRoutes.find(r => r.agency === 'UCTSL') : passengerRoutes[3]); // default to PM4
+      // Route determination: from directed GPS/feed matches, duty hints, or assignment (never fake-default to PM4)
+      const primaryMatch = matches.find(m => m.basis !== 'shared_corridor') || matches[0];
+      const assignedRouteId = primaryMatch?.routeId || dutyRouteHints[bus.id] || (bus.assignment ? bus.assignment.replace(/^ud/i, '') : null);
+      const matchedRoute = assignedRouteId ? passengerRoutes.find(r => r.id === assignedRouteId) : null;
 
       // Nearest stop along route or overall
       const nearestStop = findNearestStop(bus.lat, bus.lng, matchedRoute?.stops) || findNearestStop(bus.lat, bus.lng);
 
-      // If matches was empty but we know the bus's duty route, add the fallback match
+      // If matches was empty but we know the bus's duty route, add the fallback duty_hint match
       if (matches.length === 0 && matchedRoute) {
         matches.push({
           routeId: matchedRoute.id,
           basis: 'duty_hint',
+          direction: 0,
           position: nearestStop ? { kind: 'near_stop', stopIds: [nearestStop.id] } : null
         });
       }
 
       return {
         ...bus,
+        live,
         plateFormatted: formatPlate(bus.id),
-        routeId: matchedRoute?.id || '4',
-        routeCode: matchedRoute?.code || 'PM4',
-        routeTitle: matchedRoute?.title || 'बड़गांव → बलिचा',
-        routeTitleEn: matchedRoute?.titleEn || routeTitlesEn[matchedRoute?.id] || 'Badgaon ➔ Balicha',
+        routeId: matchedRoute?.id || null,
+        routeCode: matchedRoute?.code || null,
+        routeTitle: matchedRoute?.title || bus.route || 'City Bus',
+        routeTitleEn: matchedRoute?.titleEn || routeTitlesEn[matchedRoute?.id] || bus.route || 'City Bus',
         nearestStop,
         matches
       };

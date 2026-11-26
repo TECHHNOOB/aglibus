@@ -5,6 +5,33 @@ const feeds = {
   last: { path: "/bus/api/last-signals", interval: 60000 },
   locks: { path: "/bus/api/route-locks", interval: 60000 }
 };
+const vehiclePlates = {
+  "d1fe479be7cb4948": "RJ27PB5202",
+  "d68afba8b7caa973": "RJ27PB3626",
+  "e00e3ff1821549c7": "RJ27PB3106",
+  "b8ea6046bd39fbe9": "RJ27PB3100",
+  "90a30464c3842b42": "RJ27PB3102",
+  "d9a56ef0f6521341": "RJ27PB3099",
+  "c321671393815bc0": "RJ27PB3098",
+  "41ebf7c8736855cc": "RJ27PB3103",
+  "e1642489b1bf563e": "RJ27PB3104",
+  "88814739976272a5": "RJ27PB3101",
+  "e7ce40736279a39a": "RJ27PB3624",
+  "b09e7935abb5e0d0": "RJ27PB3166",
+  "7a947976112683f6": "RJ27PB3163",
+  "a7317d12fbdd168b": "RJ27PB3169",
+  "25e76895c9a3306b": "RJ27PB3071",
+  "a341dcf54d43e0b1": "RJ27PB3171",
+  "9cbdf185e8f54dc5": "RJ27PB3097",
+  "d6f56d67c01c07f0": "RJ27PB3105",
+  "41b9d994f4c857a3": "RJ27PB3625",
+  "1bba3bea89cf151c": "RJ27PB3167",
+  "028e6c6f73dfcba4": "RJ27PB3165",
+  "9a3db8eba4b6f0f8": "RJ27PB3627",
+  "625d346ed05137b4": "RJ27PB3164",
+  "067831fb73427d94": "RJ27PB3168",
+  "9e694dcdf4a458cf": "RJ27PB3170"
+};
 const cache = new Map();
 
 function records(value, depth = 0) {
@@ -42,22 +69,29 @@ function gpsTime(row, fetchedAt) {
 
 async function normalize(rows, fetchedAt, locks) {
   const buses = await Promise.all(rows.filter(row => row && typeof row === "object").map(async row => {
-    const sourceId = first(row, ["vrn", "vehicleNo", "vehicle_no", "vehicleNumber", "vehicle_number", "regNo",
-      "reg_no", "registration", "busNo", "bus_no", "imei", "deviceId", "device_id", "name", "id"]);
+    const values = ["vrn", "vehicleNo", "vehicle_no", "vehicleNumber", "vehicle_number", "regNo", "reg_no",
+      "registration", "busNo", "bus_no", "imei", "deviceId", "device_id", "name", "id"].map(k => String(row[k] ?? "").trim())
+      .filter(value => value && !/^(?:bus|unknown|n\/a|null|undefined|-)$/i.test(value));
+    const keys = values.map(value => value.toUpperCase().replace(/[^A-Z0-9]/g, ""));
+    const plate = keys.find(key => /^[A-Z]{2}\d{1,2}[A-Z]{1,3}\d{3,4}$/.test(key));
+    const sourceId = plate || values.find(value => /^\d{14,16}$/.test(value)) || values[0];
     const lat = Number(first(row, ["latitude", "lattutide", "lat", "Latitude"]));
     const lng = Number(first(row, ["longitude", "lon", "lng", "long", "Longitude"]));
     if (sourceId == null || !Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 ||
         Math.abs(lng) > 180 || !lat || !lng) return null;
     const rawId = String(sourceId).trim();
     if (!rawId || /^(BUS|UNKNOWN)$/i.test(rawId)) return null;
-    const plate = rawId.toUpperCase().replace(/[^A-Z0-9]/g, "").match(/^[A-Z]{2}\d{1,2}[A-Z]{1,3}\d{3,4}$/);
     const fingerprint = plate ? null : await crypto.subtle.digest("SHA-256", new TextEncoder().encode(rawId));
-    const id = plate?.[0] ?? "Bus " + Array.from(new Uint8Array(fingerprint).slice(0, 4),
-      byte => byte.toString(16).padStart(2, "0")).join("").toUpperCase();
+    const hex = fingerprint && Array.from(new Uint8Array(fingerprint).slice(0, 8),
+      byte => byte.toString(16).padStart(2, "0")).join("");
+    const id = plate ?? vehiclePlates[hex] ?? "Bus " + hex.slice(0, 8).toUpperCase();
     const speed = Number(first(row, ["speed", "currentSpeed"]));
     return {
-      id, lat, lng, assignment: locks.get(rawId.toUpperCase().replace(/[^A-Z0-9]/g, "")) ?? "", speed: Number.isFinite(speed) && speed >= 0 ? speed : null,
+      id, lat, lng,
+      assignment: locks.get(id) ?? keys.map(key => locks.get(key)).find(Boolean) ?? "",
+      speed: Number.isFinite(speed) && speed >= 0 ? speed : null,
       gpsAt: gpsTime(row, fetchedAt),
+      tripId: String(first(row, ["gtfs_trip_id", "trip_id", "tripId"]) || "").slice(0, 100),
       agency: /uctsl/i.test(String(row.agency || row.source || "")) ? "UCTSL" :
         /pm|e.?bus|cesl/i.test(String(row.agency || row.source || "")) ? "PM e-Bus" : "Unknown",
       route: String(first(row, ["route", "routeName", "route_name"]) || "").slice(0, 80)

@@ -179,7 +179,7 @@ function LiveTrackerContent() {
     return () => clearInterval(timer);
   }, [selectedRouteId]);
 
-  // Keep selected bus valid within matching buses
+  // Keep selected bus valid within matching buses, prioritizing buses moving in the selected direction
   useEffect(() => {
     if (matchingBuses.length === 0) {
       setSelectedBusId(null);
@@ -190,15 +190,22 @@ function LiveTrackerContent() {
       setSelectedBusId(busParam);
       return;
     }
-    // Otherwise keep current or auto-select moving bus on this route
+    const targetDir = isReverse ? -1 : 1;
+    const curRId = String(activeRoute?.id || selectedRouteId);
+
+    // Otherwise keep current or auto-select bus moving in the user's direction
     setSelectedBusId(prev => {
       if (prev && matchingBuses.some(b => b.id.toLowerCase() === prev.toLowerCase())) {
         return prev;
       }
+      const sameDir = matchingBuses.find(b =>
+        b.matches?.some(m => m.routeId === curRId && m.direction === targetDir)
+      );
+      if (sameDir) return sameDir.id;
       const moving = matchingBuses.find(b => b.speed > 0);
       return moving ? moving.id : matchingBuses[0].id;
     });
-  }, [matchingBuses, busParam]);
+  }, [matchingBuses, busParam, isReverse, activeRoute, selectedRouteId]);
 
   // Active bus: strictly from matchingBuses
   const currentBus = useMemo(() => {
@@ -381,6 +388,12 @@ function LiveTrackerContent() {
             const isSelected = currentBus && currentBus.id === bus.id;
             const busPlate = bus.plateFormatted || formatBusPlate(bus.id);
             const busMoving = bus.speed && bus.speed >= 2;
+            const targetDir = isReverse ? -1 : 1;
+            const curRId = String(activeRoute?.id || selectedRouteId);
+            const busMatch = bus.matches?.find(m => m.routeId === curRId);
+            const busDir = busMatch?.direction || 0;
+            const isSameDir = busDir === targetDir;
+            const isOppositeDir = busDir !== 0 && busDir !== targetDir;
 
             return (
               <button
@@ -390,11 +403,23 @@ function LiveTrackerContent() {
                 className={`px-3 py-1 rounded-full text-xs font-extrabold shrink-0 flex items-center gap-1.5 transition-all shadow-2xs ${
                   isSelected
                     ? 'bg-primary text-on-primary shadow-xs ring-2 ring-primary/30'
+                    : isOppositeDir
+                    ? 'bg-surface-container-lowest/60 text-on-surface-variant border border-outline-variant/30 opacity-75'
                     : 'bg-surface-container-lowest text-on-surface border border-outline-variant/30 hover:bg-surface-container'
                 }`}
               >
                 <span className={`w-2 h-2 rounded-full ${busMoving ? 'bg-secondary animate-pulse' : 'bg-outline'}`} />
                 <span>{busPlate}</span>
+                {isSameDir && (
+                  <span className={`text-[9.5px] px-1.5 py-0.2 rounded font-bold ${isSelected ? 'bg-secondary text-on-secondary' : 'bg-secondary-fixed text-on-secondary-fixed'}`}>
+                    ➔
+                  </span>
+                )}
+                {isOppositeDir && (
+                  <span className="text-[9.5px] px-1 py-0.2 rounded bg-error-container text-on-error-container font-bold" title={lang === 'hi' ? 'विपरीत दिशा' : 'Opposite direction'}>
+                    ⇄
+                  </span>
+                )}
                 <span className="text-[10px] opacity-85">
                   {busMoving ? `${Math.round(bus.speed)}km/h` : (lang === 'hi' ? 'खड़ी है' : 'Halt')}
                 </span>
